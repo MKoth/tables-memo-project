@@ -314,21 +314,23 @@ const styles = StyleSheet.create({
     minHeight: 400,
   },
   header: {
-    padding: 20,
+    padding: 8,
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
+    fontFamily: 'Comic Sans MS',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+    fontFamily: 'Comic Sans MS',
   },
   progress: {
     fontSize: 14,
@@ -363,15 +365,13 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 12,
     backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
   },
   button: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 6,
     alignItems: 'center',
     marginHorizontal: 4,
   },
@@ -380,27 +380,27 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#fff',
+    fontFamily: 'Comic Sans MS',
   },
   secondaryButtonText: {
     color: '#666',
+    fontFamily: 'Comic Sans MS',
   },
   contentContainer: {
     flex: 1,
   },
   tableContainer: {
     flex: 1,
-    marginHorizontal: 16,
-    minHeight: 200,
+    marginHorizontal: 10,
+    minHeight: 150,
   },
   variantsContainer: {
-    maxHeight: '50vh',
+    maxHeight: '30vh',
   },
   feedbackContainer: {
     position: 'absolute',
@@ -435,15 +435,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#333',
+    fontFamily: 'Comic Sans MS',
   },
   flyingVariant: {
     position: 'absolute',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#e8f5e8', // Light green to match successful cells
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#4CAF50', // Green border to match successful cells
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    backgroundColor: '#a089d1', // Match selected variant purple
+    borderRadius: 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -453,12 +452,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4.65,
     elevation: 8,
     zIndex: 2000,
+    width: 80,
+    height: 40,
+    justifyContent: 'center',
   },
   flyingVariantText: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     color: '#333', // Dark text to match successful cell text
     fontWeight: 'normal',
+    fontFamily: 'Comic Sans MS',
   },
 });
 

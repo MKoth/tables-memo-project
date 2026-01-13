@@ -79,46 +79,42 @@ const TableCell = ({
 
 const styles = StyleSheet.create({
   cell: {
-    minWidth: 100,
-    minHeight: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    margin: 4,
-    padding: 8,
+    minWidth: 80,
+    minHeight: 40,
+    borderRadius: 6,
+    margin: 2,
+    padding: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyCell: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#e7efe9', // Light green
     borderStyle: 'dashed',
   },
   filledCell: {
-    backgroundColor: '#e8f5e8',
-    borderColor: '#4CAF50',
+    backgroundColor: '#9ed69e', // Successfully filled - darker green
   },
   correctCell: {
-    backgroundColor: '#e8f5e8',
-    borderColor: '#4CAF50',
+    backgroundColor: '#9ed69e', // Successfully filled - darker green
   },
   incorrectCell: {
     backgroundColor: '#ffebee',
-    borderColor: '#f44336',
   },
   headerCell: {
     backgroundColor: '#f5f5f5',
-    borderColor: '#bbb',
   },
   cellText: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     color: '#333',
+    fontFamily: 'Comic Sans MS',
   },
   headerText: {
-    fontSize: 14,
+    fontSize: 12,
     textAlign: 'center',
     color: '#666',
     fontWeight: 'bold',
+    fontFamily: 'Comic Sans MS',
   },
   rowHeaderCell: {
     flex: 0,
@@ -129,8 +125,6 @@ const styles = StyleSheet.create({
   },
   wrongCell: {
     backgroundColor: '#ffcdd2', // Light red background
-    borderColor: '#d32f2f', // Dark red border
-    borderWidth: 2, // Thicker border for emphasis
   },
 });
 

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, StyleSheet, Text } from 'react-native';
 import TableCell from './TableCell';
 
-const CELL_WIDTH = 100;
-const CELL_HEIGHT = 50;
+const CELL_WIDTH = 80;
+const CELL_HEIGHT = 40;
 
 const ScrollableTable = ({
   table,
@@ -77,9 +77,9 @@ const ScrollableTable = ({
     const tempTextWidths = [];
 
     table.rows.forEach(rowLabel => {
-      const charWidth = 10; // Approximate character width
-      const padding = 16; // Left + right padding
-      const margin = 8; // Left + right margin
+      const charWidth = 6; // Approximate character width
+      const padding = 8; // Left + right padding
+      const margin = 2; // Left + right margin
       const calculatedWidth = (rowLabel.length * charWidth) + padding + margin;
       tempTextWidths.push(calculatedWidth);
     });
@@ -233,13 +233,14 @@ const styles = StyleSheet.create({
     height: CELL_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 4,
+    margin: 2,
   },
   headerText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#666',
     textAlign: 'center',
+    fontFamily: 'Comic Sans MS',
   },
   firstColumn: {
     position: 'absolute',
@@ -250,14 +251,15 @@ const styles = StyleSheet.create({
   rowHeaderCell: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    margin: 4,
+    paddingHorizontal: 6,
+    margin: 2,
   },
   rowHeaderText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#666',
     textAlign: 'center',
+    fontFamily: 'Comic Sans MS',
   },
   mainBodyContainer: {
     position: 'absolute',
