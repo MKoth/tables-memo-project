@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, StyleSheet, Text } from 'react-native';
 import TableCell from './TableCell';
+import ScrollHandles from './ScrollHandles';
 
 const CELL_WIDTH = 80;
 const CELL_HEIGHT = 40;
@@ -10,9 +11,20 @@ const ScrollableTable = ({
   onCellPress,
   showAnswers = false,
   wrongCell = null,
+  getCellIsHovered,
+  registerCellLayout,
+  draggedVariant,
+  dragPosition,
 }) => {
+  const scrollSpeed = 10;
   const [firstColumnWidth, setFirstColumnWidth] = useState(80);
   const [tableHeight, setTableHeight] = useState(300);
+  const [viewportSize, setViewportSize] = useState({ width: 400, height: 300 }); // Default fallback
+  const [scrollState, setScrollState] = useState({
+    horizontal: { offset: 0, maxOffset: 0, canScrollLeft: false, canScrollRight: false },
+    vertical: { offset: 0, maxOffset: 0, canScrollUp: false, canScrollDown: false },
+  });
+  const [mainTableBodyLayout, setMainTableBodyLayout] = useState(null);
 
   // Refs for scroll synchronization
   const headerScrollRef = useRef(null);
@@ -51,25 +63,68 @@ const ScrollableTable = ({
     }, 5);
   };
 
+  // Update scroll state and handle availability
+  const updateScrollState = (scrollX, scrollY) => {
+    setScrollState(prev => {
+      const newState = { ...prev };
+      if (scrollX !== null) {
+        newState.horizontal.offset = scrollX;
+        newState.horizontal.canScrollLeft = scrollX > 0;
+        newState.horizontal.canScrollRight = scrollX < newState.horizontal.maxOffset;
+      }
+      if (scrollY !== null) {
+        newState.vertical.offset = scrollY;
+        newState.vertical.canScrollUp = scrollY > 0;
+        newState.vertical.canScrollDown = scrollY < newState.vertical.maxOffset;
+      }
+      return newState;
+    });
+  };
+
+  // Scroll handle functions
+  const scrollLeft = () => {
+    const newOffset = Math.max(0, scrollState.horizontal.offset - scrollSpeed);
+    bodyHorizontalScrollRef.current?.scrollTo({ x: newOffset, animated: false });
+  };
+
+  const scrollRight = () => {
+    const newOffset = Math.min(scrollState.horizontal.maxOffset, scrollState.horizontal.offset + scrollSpeed);
+    bodyHorizontalScrollRef.current?.scrollTo({ x: newOffset, animated: false });
+  };
+
+  const scrollUp = () => {
+    const newOffset = Math.max(0, scrollState.vertical.offset - scrollSpeed);
+    bodyVerticalScrollRef.current?.scrollTo({ y: newOffset, animated: false });
+  };
+
+  const scrollDown = () => {
+    const newOffset = Math.min(scrollState.vertical.maxOffset, scrollState.vertical.offset + scrollSpeed);
+    bodyVerticalScrollRef.current?.scrollTo({ y: newOffset, animated: false });
+  };
+
   // Scroll event handlers
   const handleHeaderScroll = (event) => {
     const scrollX = event.nativeEvent.contentOffset.x;
     syncHorizontalScroll(scrollX);
+    updateScrollState(scrollX, null);
   };
 
   const handleColumnScroll = (event) => {
     const scrollY = event.nativeEvent.contentOffset.y;
     syncVerticalScroll(scrollY);
+    updateScrollState(null, scrollY);
   };
 
   const handleBodyHorizontalScroll = (event) => {
     const scrollX = event.nativeEvent.contentOffset.x;
     syncHorizontalScroll(scrollX);
+    updateScrollState(scrollX, null);
   };
 
   const handleBodyVerticalScroll = (event) => {
     const scrollY = event.nativeEvent.contentOffset.y;
     syncVerticalScroll(scrollY);
+    updateScrollState(null, scrollY);
   };
 
   useEffect(() => {
@@ -144,12 +199,33 @@ const ScrollableTable = ({
       </ScrollView>
 
       {/* MAIN TABLE BODY - Both Horizontal and Vertical Scroll */}
-      <View style={[styles.mainBodyContainer, {
-        left: firstColumnWidth,
-        top: CELL_HEIGHT,
-        bottom: 8, // Fill to bottom of container
-        right: 8, // Leave space for container padding
-      }]}>
+      <View
+        style={[styles.mainBodyContainer, {
+          left: firstColumnWidth,
+          top: CELL_HEIGHT,
+          bottom: 8, // Fill to bottom of container
+          right: 8, // Leave space for container padding
+        }]}
+        onLayout={(event) => {
+          setMainTableBodyLayout(event.nativeEvent.layout);
+          const { width, height } = event.nativeEvent.layout;
+          setViewportSize({ width, height });
+
+          // Update scroll offsets with actual viewport dimensions
+          const CELL_MARGIN = 4;
+          const totalTableWidth = table.columns.length * CELL_WIDTH + table.columns.length * CELL_MARGIN;
+          const totalTableHeight = table.rows.length * CELL_HEIGHT + table.rows.length * CELL_MARGIN;
+          const maxHorizontalOffset = Math.max(0, totalTableWidth - width);
+          const maxVerticalOffset = Math.max(0, totalTableHeight - height);
+
+          setScrollState(prev => ({
+            horizontal: { ...prev.horizontal, maxOffset: maxHorizontalOffset },
+            vertical: { ...prev.vertical, maxOffset: maxVerticalOffset },
+          }));
+
+          updateScrollState(0, 0); // Trigger state update
+        }}
+      >
         <ScrollView
           ref={bodyHorizontalScrollRef}
           horizontal
@@ -186,6 +262,8 @@ const ScrollableTable = ({
                       isRowHeader={false}
                       dynamicWidth={undefined}
                       isWrong={isWrongCell}
+                      isDragOver={getCellIsHovered && getCellIsHovered(cell.row, cell.col)}
+                      registerCellLayout={registerCellLayout}
                     />
                   );
                 })}
@@ -193,6 +271,21 @@ const ScrollableTable = ({
             ))}
           </ScrollView>
         </ScrollView>
+
+        {/* Scroll Handles - positioned inside the main body area */}
+        <ScrollHandles
+          canScrollLeft={scrollState.horizontal.canScrollLeft}
+          canScrollRight={scrollState.horizontal.canScrollRight}
+          canScrollUp={scrollState.vertical.canScrollUp}
+          canScrollDown={scrollState.vertical.canScrollDown}
+          onScrollLeft={scrollLeft}
+          onScrollRight={scrollRight}
+          onScrollUp={scrollUp}
+          onScrollDown={scrollDown}
+          showHandles={!!draggedVariant} // Only show during drag operations
+          dragPosition={dragPosition}
+          mainTableBodyLayout={mainTableBodyLayout}
+        />
       </View>
     </View>
   );
