@@ -1,17 +1,90 @@
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+
+const DraggableVariant = ({
+  variant,
+  isSelected,
+  isUsed,
+  onVariantSelect,
+  onDragStart,
+  onDragEnd,
+  onDragUpdate,
+  isBeingDragged,
+}) => {
+  const dragOffset = useSharedValue({ x: 0, y: 0 });
+  const isDragging = useSharedValue(false);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: dragOffset.value.x },
+      { translateY: dragOffset.value.y },
+      { scale: isDragging.value ? 1.1 : 1 },
+    ],
+    zIndex: isDragging.value ? 1000 : 1,
+    opacity: isBeingDragged ? 0 : 1, // Hide when being dragged globally
+    backgroundColor: isSelected ? '#a089d1' : '#e6e6fa', // Dark purple for selected, light purple for normal
+  }), [isBeingDragged, isSelected]);
+
+
+
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      'worklet';
+      isDragging.value = true;
+      scheduleOnRN(onDragStart, variant);
+    })
+    .onUpdate((event) => {
+      'worklet';
+      dragOffset.value = {
+        x: event.translationX,
+        y: event.translationY,
+      };
+      scheduleOnRN(onDragUpdate, event.absoluteX, event.absoluteY, variant);
+    })
+    .onEnd(() => {
+      'worklet';
+      isDragging.value = false;
+      dragOffset.value = { x: 0, y: 0 };
+      scheduleOnRN(onDragEnd, variant);
+    });
+
+  return (
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[styles.variant, animatedStyle]}>
+        <TouchableOpacity
+          style={styles.variantTouchable}
+          onPress={() => onVariantSelect(variant)}
+          disabled={isUsed}
+        >
+          <Text style={[
+            styles.variantText,
+            isSelected && styles.selectedVariantText,
+            isUsed && styles.usedVariantText,
+          ]}>
+            {variant}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </GestureDetector>
+  );
+};
 
 const VariantsList = ({
   variants,
   selectedVariant,
   onVariantSelect,
   usedVariants = [],
+  onVariantDragStart,
+  onVariantDragEnd,
+  onVariantDragUpdate,
+  draggedVariant,
 }) => {
-  const variantRefs = useRef(variants.map(() => React.createRef())).current;
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Select a variant to place:</Text>
+      <Text style={styles.title}>Drag a variant or tap to select:</Text>
       <ScrollView
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -20,31 +93,20 @@ const VariantsList = ({
         {variants.map((variant, index) => {
           const isSelected = selectedVariant === variant;
           const isUsed = usedVariants.includes(variant);
+          const isBeingDragged = draggedVariant === variant;
 
           return (
-            <View
+            <DraggableVariant
               key={`${variant}-${index}`}
-              ref={variantRefs[index]}
-              style={[
-                styles.variant,
-                isSelected && styles.selectedVariant,
-                isUsed && styles.usedVariant,
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.variantTouchable}
-                onPress={() => onVariantSelect(variant, variantRefs[index])}
-                disabled={isUsed}
-              >
-                <Text style={[
-                  styles.variantText,
-                  isSelected && styles.selectedVariantText,
-                  isUsed && styles.usedVariantText,
-                ]}>
-                  {variant}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              variant={variant}
+              isSelected={isSelected}
+              isUsed={isUsed}
+              onVariantSelect={onVariantSelect}
+              onDragStart={onVariantDragStart}
+              onDragEnd={onVariantDragEnd}
+              onDragUpdate={onVariantDragUpdate}
+              isBeingDragged={isBeingDragged}
+            />
           );
         })}
       </ScrollView>

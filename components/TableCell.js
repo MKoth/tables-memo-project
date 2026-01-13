@@ -1,18 +1,34 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
 const TableCell = ({
   cell,
   rowLabel,
   colLabel,
   onPress,
+  onDrop,
   showAnswer,
   isHeader = false,
   isRowHeader = false,
   dynamicWidth,
   isWrong = false,
+  isDragOver = false,
+  registerCellLayout,
 }) => {
   const cellRef = useRef(null);
+  const cellLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
+
+  useEffect(() => {
+    if (cellRef.current && !isHeader && registerCellLayout) {
+      cellRef.current.measureInWindow((x, y, width, height) => {
+        const layout = { x, y, width, height };
+        cellLayout.value = layout;
+        registerCellLayout(cell.row, cell.col, layout);
+      });
+    }
+  }, [cell, registerCellLayout, isHeader]);
+  
   const getCellStyle = () => {
     if (isHeader) {
       return styles.headerCell;
@@ -34,7 +50,7 @@ const TableCell = ({
       return styles.filledCell;
     }
 
-    return styles.emptyCell;
+    return isDragOver ? styles.emptyHoveredCell : styles.emptyCell;
   };
 
   const getTextStyle = () => {
@@ -63,17 +79,24 @@ const TableCell = ({
     return styles.flexCell;
   };
 
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: isDragOver ? 0.7 : 1,
+    transform: [{ scale: isDragOver ? 1.05 : 1 }],
+  }));
+
   return (
-    <TouchableOpacity
-      ref={cellRef}
-      style={[styles.cell, getCellStyle(), getFlexStyle()]}
-      onPress={() => onPress(cellRef)}
-      disabled={isHeader}
-    >
-      <Text style={getTextStyle()} numberOfLines={1} ellipsizeMode="tail">
-        {displayText()}
-      </Text>
-    </TouchableOpacity>
+    <Animated.View style={animatedStyle}>
+      <TouchableOpacity
+        ref={cellRef}
+        style={[styles.cell, getCellStyle(), getFlexStyle()]}
+        onPress={() => onPress(cellRef)}
+        disabled={isHeader}
+      >
+        <Text style={getTextStyle()} numberOfLines={1} ellipsizeMode="tail">
+          {displayText()}
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
@@ -89,6 +112,10 @@ const styles = StyleSheet.create({
   },
   emptyCell: {
     backgroundColor: '#e7efe9', // Light green
+    borderStyle: 'dashed',
+  },
+  emptyHoveredCell: {
+    backgroundColor: '#618e6c', // Darker green
     borderStyle: 'dashed',
   },
   filledCell: {
