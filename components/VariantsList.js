@@ -14,7 +14,7 @@ const VariantsList = ({
       <Text style={styles.title}>Select a variant to place:</Text>
       <ScrollView
         style={styles.scrollContainer}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.variantsContainer}
       >
         {variants.map((variant, index) => {
@@ -54,10 +54,10 @@ const VariantsList = ({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: 12,
     backgroundColor: '#fff',
-    margin: 16,
-    borderRadius: 12,
+    margin: 10,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -68,14 +68,15 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 8,
     color: '#333',
     textAlign: 'center',
+    fontFamily: 'Comic Sans MS',
   },
   scrollContainer: {
-    maxHeight: '40vh',
+    maxHeight: '20vh',
   },
   variantsContainer: {
     flexDirection: 'row',
@@ -84,20 +85,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   variant: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    margin: 6,
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-    minWidth: 80,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    margin: 4,
+    borderRadius: 6,
+    backgroundColor: '#e6e6fa', // Light purple
+    minWidth: 70,
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectedVariant: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#2196F3',
+    backgroundColor: '#a089d1', // Purple
     transform: [{ scale: 1.05 }],
   },
   usedVariant: {
@@ -110,17 +108,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   variantText: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     color: '#333',
     fontWeight: '500',
+    fontFamily: 'Comic Sans MS',
   },
   selectedVariantText: {
-    color: '#2196F3',
+    color: '#452563', // Dark purple
     fontWeight: 'bold',
+    fontFamily: 'Comic Sans MS',
   },
   usedVariantText: {
     color: '#999',
+    fontFamily: 'Comic Sans MS',
   },
 });
 
