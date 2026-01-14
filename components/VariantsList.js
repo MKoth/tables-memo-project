@@ -14,6 +14,7 @@ const DraggableVariant = ({
   onDragUpdate,
   isBeingDragged,
 }) => {
+  const variantRef = useRef(null);
   const dragOffset = useSharedValue({ x: 0, y: 0 });
   const isDragging = useSharedValue(false);
 
@@ -55,8 +56,9 @@ const DraggableVariant = ({
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.variant, animatedStyle]}>
         <TouchableOpacity
+          ref={variantRef}
           style={styles.variantTouchable}
-          onPress={() => onVariantSelect(variant)}
+          onPress={() => onVariantSelect(variant, variantRef)}
           disabled={isUsed}
         >
           <Text style={[
