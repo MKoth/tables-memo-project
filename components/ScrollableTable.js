@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#666',
     textAlign: 'center',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   firstColumn: {
     position: 'absolute',
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#666',
     textAlign: 'center',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   mainBodyContainer: {
     position: 'absolute',

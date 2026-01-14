@@ -134,14 +134,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     color: '#333',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   headerText: {
     fontSize: 12,
     textAlign: 'center',
     color: '#666',
     fontWeight: 'bold',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   rowHeaderCell: {
     flex: 0,

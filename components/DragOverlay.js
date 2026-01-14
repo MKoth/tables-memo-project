@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#452563', // Dark purple text
     fontWeight: 'bold',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
 });
 

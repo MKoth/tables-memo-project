@@ -457,14 +457,14 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     marginBottom: 6,
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   subtitle: {
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
     marginBottom: 8,
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   progress: {
     fontSize: 14,
@@ -519,11 +519,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#fff',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   secondaryButtonText: {
     color: '#666',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   contentContainer: {
     flex: 1,
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#333',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
   dragFeedbackText: {
     color: '#a089d1', // Purple text to match selected variants
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#333', // Dark text to match successful cell text
     fontWeight: 'normal',
-    fontFamily: 'Comic Sans MS',
+    fontFamily: 'ComicSansMS',
   },
 });
 
