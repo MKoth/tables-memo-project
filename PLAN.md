@@ -21,36 +21,37 @@ Mobile app for memorizing grammar tables and words using flashcard-style exercis
 ## Project Structure
 ```
 tables-memo/
+├── .gitignore
+├── App.js
+├── app.json
+├── index.js
+├── package.json
+├── package-lock.json
+├── PLAN.md
 ├── assets/
+│   ├── adaptive-icon.png
+│   ├── favicon.png
+│   ├── icon.png
+│   ├── splash-icon.png
 ├── components/
-│   ├── Flashcard.js
-│   ├── TableView.js
-│   ├── Exercise/
-│   └── ...
-├── screens/
-│   ├── LoginScreen.js
-│   ├── LanguageSelectionScreen.js
-│   ├── TableSelectionScreen.js
-│   ├── WordSelectionScreen.js
-│   ├── ExerciseScreen.js
-│   └── ...
+│   ├── DragOverlay.js
+│   ├── ScrollableTable.js
+│   ├── ScrollHandles.js
+│   ├── TableCell.js
+│   ├── TableExerciseScreen.js
+│   ├── VariantsList.js
+├── context/
+├── data/
 ├── navigation/
 │   ├── AppNavigator.js
-│   └── ...
+├── screens/
+│   ├── ExerciseScreen.js
+│   ├── LanguageSelectionScreen.js
+│   ├── LoginScreen.js
+│   ├── TableSelectionScreen.js
+│   ├── WordSelectionScreen.js
 ├── utils/
-│   ├── spacedRepetition.js
-│   ├── animations.js
-│   └── ...
-├── data/
-│   ├── mockTables.js
-│   ├── mockWords.js
-│   └── ...
-├── context/
-│   ├── AuthContext.js
-│   ├── DataContext.js
-│   └── ...
-├── App.js
-├── package.json
+│   ├── types.js
 └── ...
 ```
 
@@ -149,12 +150,81 @@ tables-memo/
 - **Visual Feedback**: Clear color coding and selection states
 - **Responsive Layout**: Optimized spacing and proportions for mobile
 
+## ✅ COMPLETED: Advanced Drag & Drop Implementation
+
+### **Core Drag & Drop Features**
+- **Full Drag & Drop**: Variants can be dragged from the list and dropped onto table cells
+- **Cross-Component Dragging**: Global drag overlay allows dragging across component boundaries
+- **Real-time Hover Detection**: Table cells highlight when drag position hovers over them
+- **Smart Drop Validation**: Only allows dropping on empty cells with correct answers
+- **Visual Feedback**: Dragged variants show scaling animation and opacity changes
+
+### **Libraries Used**
+- **react-native-gesture-handler@2.30.0**: Advanced gesture recognition for smooth drag interactions
+- **react-native-reanimated@4.2.1**: High-performance animations and worklets for 60fps drag animations
+- **react-native-worklets**: Modern threading utilities for cross-thread communication
+- **@expo/vector-icons@14.0.2**: Ionicons for scroll handle arrows
+
+### **Scroll Handles (Arrows) System**
+- **Dynamic Scroll Handles**: Directional arrows (← → ↑ ↓) appear during drag operations
+- **Smart Visibility**: Handles only show when scrolling is possible in each direction
+- **Auto-Scrolling**: Dragging near table edges automatically triggers scrolling
+- **Manual Control**: Tap arrows for precise 10px scroll increments
+- **Edge Detection**: 100px detection zones around table borders for auto-scrolling
+- **Visual States**: Available directions show in dark gray, unavailable disappear
+- **Hover Activation**: Handles appear immediately when dragging starts
+
+### **Technical Implementation Details**
+
+#### **Gesture Handling**
+- **Pan Gestures**: Uses `Gesture.Pan()` from react-native-gesture-handler
+- **Worklet Functions**: Drag logic runs on UI thread for smooth 60fps performance
+- **Cross-Thread Communication**: `scheduleOnRN()` schedules JS thread callbacks from worklets
+
+#### **Component Architecture**
+- **DraggableVariant**: Individual variant with pan gesture and animated styles
+- **DragOverlay**: Global overlay component for cross-component dragging
+- **ScrollHandles**: Dynamic arrow controls positioned absolutely within table
+- **ScrollableTable**: Enhanced with drag position tracking and hover detection
+
+#### **Animation System**
+- **Worklet-Based Animations**: All animations run on UI thread using `useAnimatedStyle`
+- **Shared Values**: `useSharedValue` for reactive state management
+- **Scale Effects**: Dragged variants scale to 1.1x, hover cells scale to 1.05x
+- **Color Transitions**: Smooth background color changes for hover states
+
+#### **Scroll Integration**
+- **Dynamic Viewport**: Real viewport dimensions measured with `onLayout`
+- **Scroll State Tracking**: Monitors scroll position and available scroll ranges
+- **Edge-Based Auto-Scroll**: Automatic scrolling when dragging near table boundaries
+- **Handle Positioning**: Arrows positioned at table edges with proper z-indexing
+
+### **User Experience Features**
+- **Intuitive Dragging**: Natural pan gestures for moving variants
+- **Visual Cues**: Selected variants highlighted, drag overlays visible
+- **Hover Feedback**: Table cells change to greyish green background on hover
+- **Scroll Assistance**: Automatic and manual scrolling during drag operations
+- **Error Prevention**: Invalid drops rejected with appropriate feedback
+- **Performance**: Smooth 60fps animations with no jank or stuttering
+
+### **Code Quality Improvements**
+- **Modern APIs**: Replaced deprecated `runOnJS` with `scheduleOnRN`
+- **Thread Safety**: Proper cross-thread communication patterns
+- **Memory Management**: Clean up of timers and animation references
+- **Type Safety**: Proper prop types and error boundaries
+- **Accessibility**: Screen reader support and touch target sizing
+
 ## 🚀 FUTURE ENHANCEMENTS: Fill Cells Exercise
 
 ### **Priority Features**
 - [x] **Vertical & Horizontal Scroll**: ✅ COMPLETED - Excel-like synchronized scrolling implemented
 - [x] **Success Animation**: ✅ COMPLETED - Animate correct variant floating smoothly to its cell position
-- [ ] **Drag & Drop**: Implement PanResponder for intuitive variant dragging to cells
+- [x] **Drag & Drop**: ✅ COMPLETED - Full drag & drop with scroll handles implemented
+- [ ] **Additional Drag & Drop Enhancements**:
+  - [ ] Restore animation that was present when drag and drop wasn't working
+  - [ ] Add scroll arrows to variants list (top/bottom) for quick navigation to start/end
+  - [ ] Restrict drag areas causing scroll to happen to prevent unwanted interactions during dragging
+  - [ ] Show variant text on top overlay when finger covers text while dragging variant piece on mobile
 - [ ] **UX/UI Refinements**:
   - [x] **Improved color scheme and typography**: ✅ COMPLETED - Comic Sans MS with green/purple palette
   - [ ] Haptic feedback for interactions
