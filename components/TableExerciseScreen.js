@@ -347,15 +347,20 @@ const TableExerciseScreen = ({ navigation }) => {
       )}
 
       {/* Feedback Message - absolutely positioned to overlay table */}
-      {feedbackMessage && (
+      {(feedbackMessage || draggedVariant) && (
         <View style={[
           styles.feedbackContainer,
-          feedbackMessage.type === 'error' && styles.errorFeedback,
-          feedbackMessage.type === 'success' && styles.successFeedback,
-          feedbackMessage.type === 'completion' && styles.completionFeedback,
+          draggedVariant ? styles.dragFeedback : (
+            feedbackMessage.type === 'error' && styles.errorFeedback ||
+            feedbackMessage.type === 'success' && styles.successFeedback ||
+            feedbackMessage.type === 'completion' && styles.completionFeedback
+          ),
         ]}>
-          <Text style={styles.feedbackText}>
-            {feedbackMessage.text}
+          <Text style={[
+            styles.feedbackText,
+            draggedVariant && styles.dragFeedbackText,
+          ]}>
+            {draggedVariant ? `Dragging: ${draggedVariant}` : feedbackMessage.text}
           </Text>
         </View>
       )}
@@ -559,12 +564,18 @@ const styles = StyleSheet.create({
   completionFeedback: {
     backgroundColor: '#e8f5e8', // Greenish background for completion
   },
+  dragFeedback: {
+    backgroundColor: '#e6e6fa', // Light purple background for drag feedback
+  },
   feedbackText: {
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#333',
     fontFamily: 'Comic Sans MS',
+  },
+  dragFeedbackText: {
+    color: '#a089d1', // Purple text to match selected variants
   },
   flyingVariant: {
     position: 'absolute',
