@@ -3,11 +3,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Import screens
-import LoginScreen from '../screens/LoginScreen';
-import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
-import TableSelectionScreen from '../screens/TableSelectionScreen';
-import WordSelectionScreen from '../screens/WordSelectionScreen';
-import ExerciseScreen from '../screens/ExerciseScreen';
+import LoginScreen from '../screens/auth/LoginScreen';
+import LanguageSelectionScreen from '../screens/selection/LanguageSelectionScreen';
+import LearningTypeSelectionScreen from '../screens/selection/LearningTypeSelectionScreen';
+import TopicSelectionScreen from '../screens/selection/TopicSelectionScreen';
+import ExerciseSelectionScreen from '../screens/selection/ExerciseSelectionScreen';
+import FillCellsExerciseScreen from '../screens/exercises/tables/FillCellsExerciseScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -37,19 +38,24 @@ const AppNavigator = () => {
           options={{ title: 'Select Language' }}
         />
         <Stack.Screen
-          name="TableSelection"
-          component={TableSelectionScreen}
-          options={{ title: 'Select Tables' }}
+          name="LearningTypeSelection"
+          component={LearningTypeSelectionScreen}
+          options={{ title: 'Choose Learning Type' }}
         />
         <Stack.Screen
-          name="WordSelection"
-          component={WordSelectionScreen}
-          options={{ title: 'Select Words' }}
+          name="TopicSelection"
+          component={TopicSelectionScreen}
+          options={{ title: 'Select Topics' }}
         />
         <Stack.Screen
-          name="Exercise"
-          component={ExerciseScreen}
-          options={{ title: 'Exercise' }}
+          name="ExerciseSelection"
+          component={ExerciseSelectionScreen}
+          options={{ title: 'Choose Exercise' }}
+        />
+        <Stack.Screen
+          name="FillCellsExercise"
+          component={FillCellsExerciseScreen}
+          options={{ title: 'Fill Cells Exercise' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

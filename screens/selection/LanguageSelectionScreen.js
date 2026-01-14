@@ -19,8 +19,8 @@ const LanguageSelectionScreen = ({ navigation }) => {
 
   const handleLanguageSelect = (language) => {
     // TODO: Store selected language in context
-    // For now, navigate to table selection
-    navigation.navigate('TableSelection');
+    // Navigate to learning type selection with selected language
+    navigation.navigate('LearningTypeSelection', { selectedLanguage: language });
   };
 
   const handlePersonalProject = () => {
@@ -57,7 +57,7 @@ const LanguageSelectionScreen = ({ navigation }) => {
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.skipButton}
-          onPress={() => navigation.navigate('TableSelection')}
+          onPress={() => navigation.navigate('LearningTypeSelection', { selectedLanguage: null })}
         >
           <Text style={styles.skipText}>Skip for now</Text>
         </TouchableOpacity>

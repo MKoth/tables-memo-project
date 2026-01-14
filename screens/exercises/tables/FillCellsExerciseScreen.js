@@ -8,11 +8,11 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import ScrollableTable from './ScrollableTable';
-import VariantsList from './VariantsList';
-import { sampleSpanishTable, createFillCellsExercise } from '../utils/types';
+import ScrollableTable from '../../../components/tables/ScrollableTable';
+import VariantsList from '../../../components/tables/VariantsList';
+import { sampleSpanishTable, createFillCellsExercise } from '../../../utils/types';
 import { useSharedValue } from 'react-native-reanimated';
-import DragOverlay from './DragOverlay';
+import DragOverlay from '../../../components/tables/DragOverlay';
 
 const TableExerciseScreen = ({ navigation }) => {
   const [exerciseState, setExerciseState] = useState(() =>

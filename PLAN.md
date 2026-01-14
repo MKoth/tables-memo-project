@@ -34,26 +34,61 @@ tables-memo/
 │   ├── icon.png
 │   ├── splash-icon.png
 ├── components/
-│   ├── DragOverlay.js
-│   ├── ScrollableTable.js
-│   ├── ScrollHandles.js
-│   ├── TableCell.js
-│   ├── TableExerciseScreen.js
-│   ├── VariantsList.js
+│   ├── shared/          # Shared components (currently empty)
+│   ├── tables/          # Table-specific components
+│   │   ├── DragOverlay.js
+│   │   ├── ScrollableTable.js
+│   │   ├── ScrollHandles.js
+│   │   ├── TableCell.js
+│   │   └── VariantsList.js
+│   └── words/           # Word-specific components (placeholders)
 ├── context/
 ├── data/
 ├── navigation/
 │   ├── AppNavigator.js
 ├── screens/
-│   ├── ExerciseScreen.js
-│   ├── LanguageSelectionScreen.js
-│   ├── LoginScreen.js
-│   ├── TableSelectionScreen.js
-│   ├── WordSelectionScreen.js
+│   ├── auth/
+│   │   └── LoginScreen.js
+│   ├── selection/
+│   │   ├── LanguageSelectionScreen.js
+│   │   ├── LearningTypeSelectionScreen.js
+│   │   ├── TopicSelectionScreen.js
+│   │   └── ExerciseSelectionScreen.js
+│   └── exercises/
+│       ├── tables/
+│       │   └── FillCellsExerciseScreen.js
+│       └── words/       # Word exercise placeholders
+│           ├── MultipleChoiceExerciseScreen.js
+│           ├── TypingExerciseScreen.js
+│           └── MatchingExerciseScreen.js
 ├── utils/
 │   ├── types.js
 └── ...
 ```
+
+## ✅ COMPLETED: App Architecture Reorganization
+
+### **New Navigation Flow**
+The app navigation has been completely reorganized for better scalability and user experience:
+
+1. **Login** → 2. **Language Selection** → 3. **Learning Type** (Tables/Words) → 4. **Topic Selection** → 5. **Exercise Selection** → 6. **Exercise**
+
+### **Key Improvements**
+- **Unified Topic Selection**: Single screen that adapts to show tables or words based on learning type
+- **Modular Exercise Structure**: Separate folders for table and word exercises
+- **Component Organization**: Components grouped by domain (shared, tables, words)
+- **Scalable Architecture**: Easy to add new exercise types and learning categories
+
+### **Current Implementation Status**
+- ✅ **Table Exercises**: Fill Cells (fully implemented with drag & drop)
+- ⏳ **Word Exercises**: Multiple Choice, Typing, Matching (placeholder screens)
+- ✅ **Navigation Flow**: Complete and tested
+- ✅ **Component Structure**: Properly organized by domain
+
+### **Future Expansion Ready**
+- Word exercise placeholders created for easy implementation
+- Component structure supports adding shared components when both table and word exercises need them
+- Navigation structure supports additional learning types beyond tables/words
 
 ## Development Phases
 1. [x] Set up Expo React Native project with web support
