@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { Ionicons } from '@expo/vector-icons';
 
 const DraggableVariant = ({
   variant,
@@ -14,6 +15,7 @@ const DraggableVariant = ({
   onDragUpdate,
   isBeingDragged,
 }) => {
+  const variantRef = useRef(null);
   const dragOffset = useSharedValue({ x: 0, y: 0 });
   const isDragging = useSharedValue(false);
 
@@ -55,8 +57,9 @@ const DraggableVariant = ({
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.variant, animatedStyle]}>
         <TouchableOpacity
+          ref={variantRef}
           style={styles.variantTouchable}
-          onPress={() => onVariantSelect(variant)}
+          onPress={() => onVariantSelect(variant, variantRef)}
           disabled={isUsed}
         >
           <Text style={[
@@ -82,13 +85,61 @@ const VariantsList = ({
   onVariantDragUpdate,
   draggedVariant,
 }) => {
+  const scrollRef = useRef(null);
+  const [scrollState, setScrollState] = useState({
+    canScrollUp: false,
+    canScrollDown: false,
+  });
+  const [contentSize, setContentSize] = useState({ width: 0, height: 0 });
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [scrollOffset, setScrollOffset] = useState(0);
+
+  // Update scroll state when content size or container size changes
+  useEffect(() => {
+    const canScroll = contentSize.height > containerSize.height;
+    const isAtTop = scrollOffset <= 0;
+    const isAtBottom = scrollOffset >= contentSize.height - containerSize.height - 2;
+
+    setScrollState({
+      canScrollUp: canScroll && !isAtTop,
+      canScrollDown: canScroll && !isAtBottom,
+    });
+  }, [contentSize, containerSize, scrollOffset]);
+
+  const handleScroll = (event) => {
+    const { contentOffset } = event.nativeEvent;
+    setScrollOffset(contentOffset.y);
+  };
+
+  const handleContentSizeChange = (width, height) => {
+    setContentSize({ width, height });
+  };
+
+  const handleLayout = (event) => {
+    const { width, height } = event.nativeEvent.layout;
+    setContainerSize({ width, height });
+  };
+
+  const scrollToTop = () => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const scrollToBottom = () => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Drag a variant or tap to select:</Text>
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.variantsContainer}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onContentSizeChange={handleContentSizeChange}
+        onLayout={handleLayout}
       >
         {variants.map((variant, index) => {
           const isSelected = selectedVariant === variant;
@@ -110,6 +161,28 @@ const VariantsList = ({
           );
         })}
       </ScrollView>
+
+      {/* Scroll Arrows */}
+      <View style={styles.arrowsContainer} pointerEvents="box-none">
+        {scrollState.canScrollUp && (
+          <TouchableOpacity
+            style={[styles.scrollArrow, styles.upArrow]}
+            onPress={scrollToTop}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-up" size={24} color="#666" />
+          </TouchableOpacity>
+        )}
+        {scrollState.canScrollDown && (
+          <TouchableOpacity
+            style={[styles.scrollArrow, styles.downArrow]}
+            onPress={scrollToBottom}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-down" size={24} color="#666" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -184,6 +257,40 @@ const styles = StyleSheet.create({
   usedVariantText: {
     color: '#999',
     fontFamily: 'Comic Sans MS',
+  },
+  arrowsContainer: {
+    position: 'absolute',
+    top: 40, // Below the title
+    bottom: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: 'box-none',
+  },
+  scrollArrow: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+    zIndex: 100,
+  },
+  upArrow: {
+    top: 0,
+    right: 10,
+  },
+  downArrow: {
+    bottom: 0,
+    right: 10,
   },
 });
 
