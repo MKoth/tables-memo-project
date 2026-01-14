@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
@@ -90,18 +90,34 @@ const VariantsList = ({
     canScrollUp: false,
     canScrollDown: false,
   });
+  const [contentSize, setContentSize] = useState({ width: 0, height: 0 });
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [scrollOffset, setScrollOffset] = useState(0);
 
-  const handleScroll = (event) => {
-    console.log(event);
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const isAtTop = contentOffset.y <= 0;
-    const isAtBottom = contentOffset.y >= contentSize.height - layoutMeasurement.height - 2; // added 2 pixels of offset to be sure
-    const canScroll = contentSize.height > layoutMeasurement.height;
+  // Update scroll state when content size or container size changes
+  useEffect(() => {
+    const canScroll = contentSize.height > containerSize.height;
+    const isAtTop = scrollOffset <= 0;
+    const isAtBottom = scrollOffset >= contentSize.height - containerSize.height - 2;
 
     setScrollState({
       canScrollUp: canScroll && !isAtTop,
       canScrollDown: canScroll && !isAtBottom,
     });
+  }, [contentSize, containerSize, scrollOffset]);
+
+  const handleScroll = (event) => {
+    const { contentOffset } = event.nativeEvent;
+    setScrollOffset(contentOffset.y);
+  };
+
+  const handleContentSizeChange = (width, height) => {
+    setContentSize({ width, height });
+  };
+
+  const handleLayout = (event) => {
+    const { width, height } = event.nativeEvent.layout;
+    setContainerSize({ width, height });
   };
 
   const scrollToTop = () => {
@@ -122,7 +138,8 @@ const VariantsList = ({
         contentContainerStyle={styles.variantsContainer}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        onLayout={handleScroll}
+        onContentSizeChange={handleContentSizeChange}
+        onLayout={handleLayout}
       >
         {variants.map((variant, index) => {
           const isSelected = selectedVariant === variant;
