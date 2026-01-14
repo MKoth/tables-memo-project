@@ -59,14 +59,17 @@ const ScrollHandles = ({
   // Auto-scroll when hovering over handles
   React.useEffect(() => {
     if (!dragPosition || !mainTableBodyLayout) return;
-    console.log(mainTableBodyLayout);
 
     const { x, y } = dragPosition;
     // Define edge zones
     const edgeThreshold = 100; // Larger threshold for easier triggering
 
-    const nearLeft = x >= mainTableBodyLayout.left && x <= mainTableBodyLayout.left + edgeThreshold && canScrollLeft;
-    const nearRight = x >= (mainTableBodyLayout.left + mainTableBodyLayout.width - edgeThreshold) && x <= mainTableBodyLayout.left + mainTableBodyLayout.width && canScrollRight;
+    const nearLeft = x >= mainTableBodyLayout.left && x <= mainTableBodyLayout.left + edgeThreshold &&
+                     y >= mainTableBodyLayout.top && y <= mainTableBodyLayout.top + mainTableBodyLayout.height &&
+                     canScrollLeft;
+    const nearRight = x >= (mainTableBodyLayout.left + mainTableBodyLayout.width - edgeThreshold) && x <= mainTableBodyLayout.left + mainTableBodyLayout.width &&
+                      y >= mainTableBodyLayout.top && y <= mainTableBodyLayout.top + mainTableBodyLayout.height &&
+                      canScrollRight;
     const nearTop = y >= mainTableBodyLayout.top && y <= mainTableBodyLayout.top + edgeThreshold && canScrollUp;
     const nearBottom = y >= (mainTableBodyLayout.top + mainTableBodyLayout.height - edgeThreshold) && y <= mainTableBodyLayout.top + mainTableBodyLayout.height && canScrollDown;
 
