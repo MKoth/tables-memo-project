@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { Ionicons } from '@expo/vector-icons';
 
 const DraggableVariant = ({
   variant,
@@ -84,13 +85,42 @@ const VariantsList = ({
   onVariantDragUpdate,
   draggedVariant,
 }) => {
+  const scrollRef = useRef(null);
+  const [scrollState, setScrollState] = useState({
+    canScrollUp: false,
+    canScrollDown: false,
+  });
+
+  const handleScroll = (event) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const isAtTop = contentOffset.y <= 0;
+    const isAtBottom = contentOffset.y >= contentSize.height - layoutMeasurement.height - 2; // added 2 pixels of offset to be sure
+    const canScroll = contentSize.height > layoutMeasurement.height;
+
+    setScrollState({
+      canScrollUp: canScroll && !isAtTop,
+      canScrollDown: canScroll && !isAtBottom,
+    });
+  };
+
+  const scrollToTop = () => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const scrollToBottom = () => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Drag a variant or tap to select:</Text>
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.variantsContainer}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         {variants.map((variant, index) => {
           const isSelected = selectedVariant === variant;
@@ -112,6 +142,28 @@ const VariantsList = ({
           );
         })}
       </ScrollView>
+
+      {/* Scroll Arrows */}
+      <View style={styles.arrowsContainer} pointerEvents="box-none">
+        {scrollState.canScrollUp && (
+          <TouchableOpacity
+            style={[styles.scrollArrow, styles.upArrow]}
+            onPress={scrollToTop}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-up" size={24} color="#666" />
+          </TouchableOpacity>
+        )}
+        {scrollState.canScrollDown && (
+          <TouchableOpacity
+            style={[styles.scrollArrow, styles.downArrow]}
+            onPress={scrollToBottom}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-down" size={24} color="#666" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -186,6 +238,40 @@ const styles = StyleSheet.create({
   usedVariantText: {
     color: '#999',
     fontFamily: 'Comic Sans MS',
+  },
+  arrowsContainer: {
+    position: 'absolute',
+    top: 40, // Below the title
+    bottom: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: 'box-none',
+  },
+  scrollArrow: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+    zIndex: 100,
+  },
+  upArrow: {
+    top: 0,
+    right: 10,
+  },
+  downArrow: {
+    bottom: 0,
+    right: 10,
   },
 });
 
