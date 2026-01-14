@@ -92,6 +92,7 @@ const VariantsList = ({
   });
 
   const handleScroll = (event) => {
+    console.log(event);
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     const isAtTop = contentOffset.y <= 0;
     const isAtBottom = contentOffset.y >= contentSize.height - layoutMeasurement.height - 2; // added 2 pixels of offset to be sure
@@ -121,6 +122,7 @@ const VariantsList = ({
         contentContainerStyle={styles.variantsContainer}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        onLayout={handleScroll}
       >
         {variants.map((variant, index) => {
           const isSelected = selectedVariant === variant;

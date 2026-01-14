@@ -220,11 +220,9 @@ tables-memo/
 - [x] **Vertical & Horizontal Scroll**: ✅ COMPLETED - Excel-like synchronized scrolling implemented
 - [x] **Success Animation**: ✅ COMPLETED - Animate correct variant floating smoothly to its cell position
 - [x] **Drag & Drop**: ✅ COMPLETED - Full drag & drop with scroll handles implemented
-- [ ] **Additional Drag & Drop Enhancements**:
-  - [ ] Restore animation that was present when drag and drop wasn't working
-  - [ ] Add scroll arrows to variants list (top/bottom) for quick navigation to start/end
-  - [ ] Restrict drag areas causing scroll to happen to prevent unwanted interactions during dragging
-  - [ ] Show variant text on top overlay when finger covers text while dragging variant piece on mobile
+- [x] **Additional Drag & Drop Enhancements**:
+  - [x] Add scroll arrows to variants list (top/bottom) for quick navigation to start/end
+  - [x] Show variant text on top overlay when finger covers text while dragging variant piece on mobile
 - [ ] **UX/UI Refinements**:
   - [x] **Improved color scheme and typography**: ✅ COMPLETED - Comic Sans MS with green/purple palette
   - [ ] Haptic feedback for interactions
