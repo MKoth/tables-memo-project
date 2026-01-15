@@ -35,7 +35,7 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
           description: 'Transform words according to grammatical rules',
           icon: '🔄',
           difficulty: 'Advanced',
-          isImplemented: false,
+          isImplemented: true,
         },
       ];
     } else {
@@ -88,6 +88,13 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
     // Navigate to the appropriate exercise screen
     if (learningType === 'tables' && exercise.id === 'fill-cells') {
       navigation.navigate('FillCellsExercise', {
+        selectedLanguage,
+        learningType,
+        selectedTopics,
+        exerciseType: exercise.id,
+      });
+    } else if (learningType === 'tables' && exercise.id === 'transformations') {
+      navigation.navigate('WordTransformationExercise', {
         selectedLanguage,
         learningType,
         selectedTopics,

@@ -34,12 +34,14 @@ tables-memo/
 │   ├── icon.png
 │   ├── splash-icon.png
 ├── components/
-│   ├── shared/          # Shared components (currently empty)
+│   ├── shared/          # Shared components
+│   │   └── VerticalArrowedScrollView.js
 │   ├── tables/          # Table-specific components
 │   │   ├── DragOverlay.js
 │   │   ├── ScrollableTable.js
 │   │   ├── ScrollHandles.js
 │   │   ├── TableCell.js
+│   │   ├── TransformationWorkspace.js
 │   │   └── VariantsList.js
 │   └── words/           # Word-specific components (placeholders)
 ├── context/
@@ -56,7 +58,8 @@ tables-memo/
 │   │   └── ExerciseSelectionScreen.js
 │   └── exercises/
 │       ├── tables/
-│       │   └── FillCellsExerciseScreen.js
+│       │   ├── FillCellsExerciseScreen.js
+│       │   └── WordTransformationExerciseScreen.js
 │       └── words/       # Word exercise placeholders
 │           ├── MultipleChoiceExerciseScreen.js
 │           ├── TypingExerciseScreen.js
@@ -80,7 +83,7 @@ The app navigation has been completely reorganized for better scalability and us
 - **Scalable Architecture**: Easy to add new exercise types and learning categories
 
 ### **Current Implementation Status**
-- ✅ **Table Exercises**: Fill Cells (fully implemented with drag & drop)
+- ✅ **Table Exercises**: Fill Cells, Word Transformations (fully implemented)
 - ⏳ **Word Exercises**: Multiple Choice, Typing, Matching (placeholder screens)
 - ✅ **Navigation Flow**: Complete and tested
 - ✅ **Component Structure**: Properly organized by domain
@@ -97,7 +100,7 @@ The app navigation has been completely reorganized for better scalability and us
 4. [x] Build data models for tables, words, and users
 5. [x] Implement table selection and basic table view
 6. [x] Develop table exercises with animations - **COMPLETED: Fill Cells Exercise**
-7. [ ] Implement word learning exercises
+7. [x] Implement word learning exercises - **COMPLETED: Word Transformations Exercise**
 8. [ ] Add spaced repetition algorithm
 9. [ ] Integrate AI chatbot for personal projects
 10. [ ] Add custom table creation feature
@@ -249,7 +252,57 @@ The app navigation has been completely reorganized for better scalability and us
 - **Type Safety**: Proper prop types and error boundaries
 - **Accessibility**: Screen reader support and touch target sizing
 
-## 🚀 FUTURE ENHANCEMENTS: Fill Cells Exercise
+## ✅ COMPLETED: Word Transformations Exercise Implementation
+
+### **Core Features Implemented**
+- **Diff-Based Operations**: Automatic generation of transformation steps using DiffMatchPatch algorithm
+- **Interactive Word Manipulation**: Users select letters to delete or choose variants to insert
+- **Pre-Generated Variants**: Wrong answer options created from actual table transformations (stable, non-regenerating)
+- **Blinking Target Cell**: Visual indicator showing which table cell corresponds to current operation
+- **Scrollable Workspace**: Vertical scrolling with up/down arrows for mobile content overflow
+- **Grammatical Context**: Complete conjugation rules displayed when "Show Tip" is pressed
+
+### **Technical Implementation**
+- **Components Created**:
+  - `WordTransformationExerciseScreen.js` - Main exercise orchestration
+  - `TransformationWorkspace.js` - Scrollable container for word display and tools
+  - `WordDisplay.js` - Interactive letter selection component
+  - `TransformationTools.js` - Hint system and action buttons
+  - `VerticalArrowedScrollView.js` - Shared scrollable component with arrows
+- **Libraries Used**:
+  - `diff-match-patch@1.0.7` - Automatic operation generation from text differences
+  - `react-native-reanimated@4.2.1` - Smooth blinking animations
+- **Data Structures**: Complete rewrite of transformation logic to use operations instead of hardcoded steps
+
+### **Algorithm Overview**
+```javascript
+// Example: "hablar" → "hablo"
+const diff = dmp.diff_main("hablar", "hablo");
+// Result: [["equal", "habl"], ["delete", "a"], ["insert", "o"]]
+const operations = diffToOps("hablar", diff);
+// Result: [{type: "delete", index: 4, length: 1}, {type: "insert", index: 4, text: "o"}]
+```
+
+### **User Experience Features**
+- **Guided Transformations**: Step-by-step word building with clear visual feedback
+- **Stable Variants**: Wrong choices don't change during exercise (pre-generated)
+- **Mobile-Optimized**: Vertical scrolling with touch-friendly arrows
+- **Educational**: Complete grammar rules for each verb type (-ar, -er, -ir)
+- **Progressive Difficulty**: Operations auto-generated for any conjugation complexity
+
+### **Smart Variant Generation**
+- **Context-Aware**: Wrong options drawn from actual table transformations
+- **Fallback System**: Random string generation if table lacks variety
+- **Performance Optimized**: Variants generated once during exercise initialization
+- **Stable Display**: No flickering or regeneration during user interaction
+
+### **Mobile-First Design**
+- **Scrollable Content**: Workspace scrolls vertically with up/down arrows
+- **Touch Targets**: Large 50px letter buttons, 70px variant buttons
+- **Responsive Layout**: Adapts to any screen size with proper content flow
+- **Visual Hierarchy**: Clear distinction between current word, operations, and hints
+
+## 🚀 FUTURE ENHANCEMENTS: Word Transformations Exercise
 
 ### **Priority Features**
 - [x] **Vertical & Horizontal Scroll**: ✅ COMPLETED - Excel-like synchronized scrolling implemented
