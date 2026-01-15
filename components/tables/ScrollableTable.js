@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { View, ScrollView, StyleSheet, Text } from 'react-native';
 import TableCell from './TableCell';
 import ScrollHandles from './ScrollHandles';
@@ -6,7 +6,7 @@ import ScrollHandles from './ScrollHandles';
 const CELL_WIDTH = 80;
 const CELL_HEIGHT = 40;
 
-const ScrollableTable = ({
+const ScrollableTable = forwardRef(({
   table,
   onCellPress,
   showAnswers = false,
@@ -17,7 +17,7 @@ const ScrollableTable = ({
   dragPosition,
   blinkingCell = null,
   blinkAnimation = null,
-}) => {
+}, ref) => {
   const scrollSpeed = 10;
   const [firstColumnWidth, setFirstColumnWidth] = useState(80);
   const [tableHeight, setTableHeight] = useState(300);
@@ -128,6 +128,26 @@ const ScrollableTable = ({
     syncVerticalScroll(scrollY);
     updateScrollState(null, scrollY);
   };
+
+  // Expose scrollToCell method via ref
+  useImperativeHandle(ref, () => ({
+    scrollToCell: (row, col) => {
+      // Calculate target scroll positions to center the cell
+      const cellX = col * (CELL_WIDTH + 4); // 4 is margin
+      const cellY = row * (CELL_HEIGHT + 4);
+
+      const targetX = Math.max(0, cellX - viewportSize.width / 2 + CELL_WIDTH / 2);
+      const targetY = Math.max(0, cellY - viewportSize.height / 2 + CELL_HEIGHT / 2);
+
+      // Clamp to max offsets
+      const clampedX = Math.min(targetX, scrollState.horizontal.maxOffset);
+      const clampedY = Math.min(targetY, scrollState.vertical.maxOffset);
+
+      // Scroll to the calculated positions
+      bodyHorizontalScrollRef.current?.scrollTo({ x: clampedX, animated: false });
+      bodyVerticalScrollRef.current?.scrollTo({ y: clampedY, animated: false });
+    }
+  }));
 
   useEffect(() => {
     // Calculate the maximum width needed for the first column
@@ -293,7 +313,7 @@ const ScrollableTable = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
