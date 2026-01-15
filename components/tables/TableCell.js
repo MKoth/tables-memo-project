@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
 
 const TableCell = ({
   cell,
@@ -15,9 +15,15 @@ const TableCell = ({
   isWrong = false,
   isDragOver = false,
   registerCellLayout,
+  blinkingCell = null,
+  blinkAnimation = null,
 }) => {
   const cellRef = useRef(null);
   const cellLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
+  const localBlinkAnimation = useSharedValue(1);
+
+  // Check if this cell should be blinking
+  const isBlinkingCell = blinkingCell && cell && cell.row === blinkingCell.row && cell.col === blinkingCell.col;
 
   useEffect(() => {
     if (cellRef.current && !isHeader && registerCellLayout) {
@@ -28,6 +34,21 @@ const TableCell = ({
       });
     }
   }, [cell, registerCellLayout, isHeader]);
+
+  // Handle blinking animation
+  useEffect(() => {
+    if (isBlinkingCell) {
+      // Start blinking animation - much more noticeable
+      localBlinkAnimation.value = withRepeat(
+        withTiming(0.2, { duration: 600 }),
+        -1, // Infinite repeat
+        true // Reverse animation (fade out then in)
+      );
+    } else {
+      // Stop blinking and reset to full opacity
+      localBlinkAnimation.value = 1;
+    }
+  }, [isBlinkingCell, localBlinkAnimation]);
   
   const getCellStyle = () => {
     if (isHeader) {
@@ -50,7 +71,7 @@ const TableCell = ({
       return styles.filledCell;
     }
 
-    return isDragOver ? styles.emptyHoveredCell : styles.emptyCell;
+    return isDragOver || isBlinkingCell ? styles.emptyHoveredCell : styles.emptyCell;
   };
 
   const getTextStyle = () => {
@@ -79,10 +100,22 @@ const TableCell = ({
     return styles.flexCell;
   };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: isDragOver ? 0.7 : 1,
-    transform: [{ scale: isDragOver ? 1.05 : 1 }],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    let opacity = isDragOver ? 0.7 : 1;
+    let scale = isDragOver ? 1.05 : 1;
+
+    // Apply blinking animation if this is the blinking cell
+    if (isBlinkingCell) {
+      opacity = localBlinkAnimation.value;
+    }
+
+    const flexStyle = {
+      opacity,
+      transform: [{ scale }],
+    };
+
+    return flexStyle;
+  });
 
   return (
     <Animated.View style={animatedStyle}>

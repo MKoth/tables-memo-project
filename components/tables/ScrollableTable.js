@@ -15,6 +15,8 @@ const ScrollableTable = ({
   registerCellLayout,
   draggedVariant,
   dragPosition,
+  blinkingCell = null,
+  blinkAnimation = null,
 }) => {
   const scrollSpeed = 10;
   const [firstColumnWidth, setFirstColumnWidth] = useState(80);
@@ -264,6 +266,8 @@ const ScrollableTable = ({
                       isWrong={isWrongCell}
                       isDragOver={getCellIsHovered && getCellIsHovered(cell.row, cell.col)}
                       registerCellLayout={registerCellLayout}
+                      blinkingCell={blinkingCell}
+                      blinkAnimation={blinkAnimation}
                     />
                   );
                 })}
