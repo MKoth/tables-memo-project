@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import VerticalArrowedScrollView from '../shared/VerticalArrowedScrollView';
 import { OPERATION_TYPES, allGrammarRulesExplanations, tableGrammarRuleMapping } from '../../utils/types';
 
 // Word Display Component
-const WordDisplay = ({ sequence, operation, selectedLetters, onLetterPress }) => {
+const WordDisplay = ({ sequence, operation, selectedLetters, wordDisplayRef, onLetterPress }) => {
   if (!sequence) return null;
 
   return (
-    <View style={styles.wordContainer}>
+    <View ref={wordDisplayRef} style={styles.wordContainer}>
       <Text style={styles.wordLabel}>Current Word:</Text>
       <View style={styles.wordDisplay}>
         {sequence.currentWord.split('').map((letter, index) => (
@@ -98,19 +98,21 @@ const TransformationTools = ({
 };
 
 // Main Transformation Workspace Component
-const TransformationWorkspace = ({
+const TransformationWorkspace = forwardRef(({
   sequence,
   operation,
   selectedLetters,
   showVariants,
+  wordDisplayRef,
   onLetterPress,
   onHintToggle,
   onSubmitRemoval,
   onVariantSelect,
   onShowVariants
-}) => {
+}, ref) => {
   return (
     <VerticalArrowedScrollView
+      ref={ref}
       style={styles.workspaceContainer}
       contentContainerStyle={styles.workspaceContent}
       arrowsContainerStyle={styles.arrowsContainer}
@@ -121,6 +123,7 @@ const TransformationWorkspace = ({
         sequence={sequence}
         operation={operation}
         selectedLetters={selectedLetters}
+        wordDisplayRef={wordDisplayRef}
         onLetterPress={onLetterPress}
       />
       <TransformationTools
@@ -135,7 +138,7 @@ const TransformationWorkspace = ({
       />
     </VerticalArrowedScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   workspaceContainer: {

@@ -302,17 +302,23 @@ const operations = diffToOps("hablar", diff);
 - **Responsive Layout**: Adapts to any screen size with proper content flow
 - **Visual Hierarchy**: Clear distinction between current word, operations, and hints
 
-## 🚀 FUTURE ENHANCEMENTS: Word Transformations Exercise
+## ✅ COMPLETED: Word Transformations Exercise with Flying Animation
 
-### **Priority Features**
-- [x] **Vertical & Horizontal Scroll**: ✅ COMPLETED - Excel-like synchronized scrolling implemented
-- [x] **Success Animation**: ✅ COMPLETED - Animate correct variant floating smoothly to its cell position
-- [x] **Drag & Drop**: ✅ COMPLETED - Full drag & drop with scroll handles implemented
-- [x] **Additional Drag & Drop Enhancements**:
-  - [x] Add scroll arrows to variants list (top/bottom) for quick navigation to start/end
-  - [x] Show variant text on top overlay when finger covers text while dragging variant piece on mobile
+### **Core Animation Features Implemented**
+- **Word-Flying Animation**: Completed words animate smoothly from workspace to target table cell
+- **Scale Transition**: Words shrink from full size to 60% during 400ms flight animation
+- **Scroll Coordination**: Table and workspace scroll automatically for optimal viewing
+- **Sequential Progression**: Smooth transition between cells with proper blinking indicators
+- **Visual Feedback**: Purple flying overlay matches the app's design theme
+
+### **Technical Animation Implementation**
+- **React Native Animated**: Position and scale animations with `Easing.out(Easing.cubic)`
+- **useEffect State Management**: Proper handling of state changes for scroll triggers
+- **Ref-Based Positioning**: Accurate word and cell position measurements
+- **Async Animation Flow**: Coordinated scrolling and animation timing
+
+### **Remaining Enhancements**
 - [ ] **UX/UI Refinements**:
-  - [x] **Improved color scheme and typography**: ✅ COMPLETED - Comic Sans MS with green/purple palette
   - [ ] Haptic feedback for interactions
   - [ ] Sound effects for correct/incorrect feedback
   - [ ] Loading states and smooth transitions
