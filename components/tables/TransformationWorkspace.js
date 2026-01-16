@@ -2,38 +2,7 @@ import React, { forwardRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import VerticalArrowedScrollView from '../shared/VerticalArrowedScrollView';
 import { OPERATION_TYPES, allGrammarRulesExplanations, tableGrammarRuleMapping } from '../../utils/types';
-
-// Word Display Component
-const WordDisplay = ({ sequence, operation, selectedLetters, wordDisplayRef, onLetterPress }) => {
-  if (!sequence) return null;
-
-  return (
-    <View ref={wordDisplayRef} style={styles.wordContainer}>
-      <Text style={styles.wordLabel}>Current Word:</Text>
-      <View style={styles.wordDisplay}>
-        {sequence.currentWord.split('').map((letter, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.letterButton,
-              selectedLetters.has(index) && styles.selectedLetter,
-              operation?.type !== OPERATION_TYPES.DELETE && styles.disabledLetter
-            ]}
-            onPress={() => onLetterPress(letter, index)}
-            disabled={operation?.type !== OPERATION_TYPES.DELETE}
-          >
-            <Text style={[
-              styles.letterText,
-              selectedLetters.has(index) && styles.selectedLetterText
-            ]}>
-              {letter}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-};
+import AnimatedWord from './AnimatedWord';
 
 // Transformation Tools Component
 const TransformationTools = ({
@@ -119,7 +88,7 @@ const TransformationWorkspace = forwardRef(({
       upArrowStyle={styles.upArrow}
       downArrowStyle={styles.downArrow}
     >
-      <WordDisplay
+      <AnimatedWord
         sequence={sequence}
         operation={operation}
         selectedLetters={selectedLetters}
@@ -152,49 +121,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  wordContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  wordLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-    fontFamily: 'ComicSansMS',
-  },
-  wordDisplay: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  letterButton: {
-    width: 50,
-    height: 50,
-    margin: 4,
-    borderRadius: 8,
-    backgroundColor: '#e6e6fa',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  selectedLetter: {
-    backgroundColor: '#a089d1',
-    borderColor: '#8a6bbf',
-  },
-  disabledLetter: {
-    opacity: 0.6,
-  },
-  letterText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    fontFamily: 'ComicSansMS',
-  },
-  selectedLetterText: {
-    color: '#fff',
   },
   toolsContainer: {
     alignItems: 'center',

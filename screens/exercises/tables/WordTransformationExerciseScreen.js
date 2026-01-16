@@ -85,12 +85,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.timing(flyingWordScale, {
-          toValue: 0.6,
-          duration: 400,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
       ]).start(() => {
         resolve();
       });
@@ -566,7 +560,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#a089d1', // Match selected variant purple
+    backgroundColor: '#9ed69e', // Match successful cell green
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: {
@@ -578,12 +572,14 @@ const styles = StyleSheet.create({
     elevation: 8,
     zIndex: 2000,
     justifyContent: 'center',
+    width: 80,
+    height: 40,
   },
   flyingWordText: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    color: '#333', // Dark text to match successful cell text
-    fontWeight: 'normal',
+    color: '#333', // White text to match successful cell
+    fontWeight: 'normal', // Bold like successful cells
     fontFamily: 'ComicSansMS',
   },
 });
