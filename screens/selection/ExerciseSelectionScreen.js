@@ -37,6 +37,14 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
           difficulty: 'Advanced',
           isImplemented: true,
         },
+        {
+          id: 'sentence-fitting',
+          name: 'Sentence Fitting',
+          description: 'Fit conjugated words into sentence contexts',
+          icon: '📄',
+          difficulty: 'Advanced',
+          isImplemented: true,
+        },
       ];
     } else {
       // Word exercises - all placeholders for now
@@ -95,6 +103,13 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
       });
     } else if (learningType === 'tables' && exercise.id === 'transformations') {
       navigation.navigate('WordTransformationExercise', {
+        selectedLanguage,
+        learningType,
+        selectedTopics,
+        exerciseType: exercise.id,
+      });
+    } else if (learningType === 'tables' && exercise.id === 'sentence-fitting') {
+      navigation.navigate('SentenceFittingExercise', {
         selectedLanguage,
         learningType,
         selectedTopics,

@@ -7,6 +7,39 @@ const createLetter = (char, orderIndex, animationOrderIndex, sequence, operation
   id: `letter-${sequence.colIndex}-${sequence.rowIndex}-${orderIndex}-${operationIndex}`, char, orderIndex, animationOrderIndex
 });
 
+// Helper function to perform delete operation animation
+const performDeleteOperation = (operation, letters, sequence, operationIndex) => {
+  const newLetters = [...letters];
+  newLetters.splice(operation.index, operation.length);
+  // after deletion, update orderIndex of remaining letters
+  for (let i = 0; i < newLetters.length; i++) {
+      newLetters[i].orderIndex = i;
+      // update animationOrderIndex to reflect deletion order
+      if (i < operation.index) {
+          newLetters[i].animationOrderIndex = operation.index - i;
+      }
+      if (i >= operation.index && i < operation.index + operation.length) {
+          newLetters[i].animationOrderIndex = i - operation.length;
+      }
+  }
+  return newLetters;
+};
+
+// Helper function to perform insert operation animation
+const performInsertOperation = (operation, letters, sequence, operationIndex) => {
+  const newLetters = [...letters];
+  const insertIndex = operation.index;
+  const insertWord = operation.text;
+  for (let i = 0; i < insertWord.length; i++) {
+      newLetters.splice(insertIndex + i, 0, createLetter(insertWord[i], insertIndex + i, i + 1, sequence, operationIndex));
+  }
+  // after insertion, update orderIndex of all letters
+  for (let i = 0; i < newLetters.length; i++) {
+      newLetters[i].orderIndex = i;
+      newLetters[i].animationOrderIndex = i;
+  }
+  return newLetters;
+};
 
 const AnimatedWord = ({ sequence, operation, selectedLetters, wordDisplayRef, onLetterPress }) => {
   if (!sequence) return null;
@@ -24,47 +57,30 @@ const AnimatedWord = ({ sequence, operation, selectedLetters, wordDisplayRef, on
         ) {
             const operation = prevSequence.operations[prevSequence.currentOperation];
             if (operation.type === "delete") {
-                // remove operation.length letters starting from operation.index
-                const newLetters = [...letters];
-                newLetters.splice(operation.index, operation.length);
-                // after deletion, update orderIndex of remaining letters
-                for (let i = 0; i < newLetters.length; i++) {
-                    newLetters[i].orderIndex = i;
-                    // update animationOrderIndex to reflect deletion order
-                    if (i < operation.index) {
-                        newLetters[i].animationOrderIndex = operation.index - i;
-                    }
-                    if (i >= operation.index && i < operation.index + operation.length) {
-                        newLetters[i].animationOrderIndex = i - operation.length;
-                    }
-                }
-                setLetters(newLetters);
-                
+                setLetters(performDeleteOperation(operation, letters, prevSequence, prevSequence.currentOperation));
             } else if (operation.type === "insert") {
-                // foreach letter in the inserted word, add it to the letters array
-                const newLetters = [...letters];
-                const insertIndex = operation.index;
-                const insertWord = operation.text;
-                for (let i = 0; i < insertWord.length; i++) {
-                    newLetters.splice(insertIndex + i, 0, createLetter(insertWord[i], insertIndex + i, i + 1, prevSequence, prevSequence.currentOperation));
-                }
-                // after insertion, update orderIndex of all letters
-                for (let i = 0; i < newLetters.length; i++) {
-                    newLetters[i].orderIndex = i;
-                    newLetters[i].animationOrderIndex = i;
-                }
-                setLetters(newLetters);
+                setLetters(performInsertOperation(operation, letters, prevSequence, prevSequence.currentOperation));
             }
 
-            if (
-                prevSequence.colIndex !== sequence.colIndex ||
-                prevSequence.rowIndex !== sequence.rowIndex
-            ) {
-                setTimeout(() => {
-                    const newLetters = sequence.currentWord.split('').map((char, index) => createLetter(char, index, index, sequence));
-                    setLetters(newLetters);
-                }, prevSequence.targetWord.length * 100 + 300); // wait for previous animations to finish
+        } else if (prevSequence && !prevSequence.isCompleted && sequence.isCompleted) {
+            // Last operation animation when sequence just completed
+            const operation = sequence.operations[sequence.currentOperation];
+            if (operation.type === "delete") {
+                setLetters(performDeleteOperation(operation, letters, prevSequence, prevSequence.currentOperation));
+            } else if (operation.type === "insert") {
+                setLetters(performInsertOperation(operation, letters, prevSequence, prevSequence.currentOperation));
             }
+        }
+
+        if (
+            prevSequence &&
+            (prevSequence.colIndex !== sequence.colIndex ||
+            prevSequence.rowIndex !== sequence.rowIndex)
+        ) {
+            setTimeout(() => {
+                const newLetters = sequence.currentWord.split('').map((char, index) => createLetter(char, index, index, sequence));
+                setLetters(newLetters);
+            }, prevSequence.targetWord.length * 100 + 300); // wait for previous animations to finish
         }
 
         setPrevSequence(sequence);
