@@ -230,3 +230,126 @@ export const diffToOps = (from, diffs) => {
 
   return ops;
 }
+
+// Sentence Fitting Exercise Data
+
+export const sentenceTemplates = [
+  "Yo _____ en la casa todos los días.",
+  "Tú _____ mucho en la escuela.",
+  "Él _____ con sus amigos.",
+  "Nosotros _____ juntos en el parque.",
+  "Vosotros _____ en el estadio.",
+  "Ellos _____ todos los fines de semana.",
+];
+
+export const sentenceMappings = {
+  'hablаr': {
+    0: [0], // Yo
+    1: [1], // Tú
+    2: [2], // Él/Ella
+    3: [3], // Nosotros
+    4: [4], // Vosotros
+    5: [5], // Ellos/Ellas
+  },
+  'comеr': {
+    0: [0],
+    1: [1],
+    2: [2],
+    3: [3],
+    4: [4],
+    5: [5],
+  },
+  'vivіr': {
+    0: [0],
+    1: [1],
+    2: [2],
+    3: [3],
+    4: [4],
+    5: [5],
+  },
+  'cantаr': {
+    0: [0],
+    1: [1],
+    2: [2],
+    3: [3],
+    4: [4],
+    5: [5],
+  },
+  'bailаr': {
+    0: [0],
+    1: [1],
+    2: [2],
+    3: [3],
+    4: [4],
+    5: [5],
+  },
+  'corrеr': {
+    0: [0],
+    1: [1],
+    2: [2],
+    3: [3],
+    4: [4],
+    5: [5],
+  },
+  'saltаr': {
+    0: [0],
+    1: [1],
+    2: [2],
+    3: [3],
+    4: [4],
+    5: [5],
+  },
+};
+
+// Create sentence fitting exercise state
+export const createSentenceFittingExercise = (table) => {
+  // First pass: generate all operations without variants
+  let allTableOperations = [];
+
+  table.cells.forEach((row, rowIndex) => {
+    row.forEach((cell, colIndex) => {
+      const baseWord = table.columns[colIndex];
+      const targetWord = cell.correctValue;
+      const operations = generateWordOperations(baseWord, targetWord);
+
+      // Collect all operations for variant generation
+      allTableOperations = allTableOperations.concat(operations);
+    });
+  });
+
+  // Second pass: create sequences with sentences
+  const allSequences = [];
+
+  table.cells.forEach((row, rowIndex) => {
+    row.forEach((cell, colIndex) => {
+      const baseWord = table.columns[colIndex];
+      const targetWord = cell.correctValue;
+      const operations = generateWordOperations(baseWord, targetWord, allTableOperations);
+
+      // Get compatible sentence indices for this infinitive and person
+      const infinitiveMapping = sentenceMappings[baseWord];
+      const compatibleSentences = infinitiveMapping ? infinitiveMapping[rowIndex] || [] : [];
+      const sentenceIndex = compatibleSentences.length > 0
+        ? compatibleSentences[Math.floor(Math.random() * compatibleSentences.length)]
+        : 0; // fallback
+
+      allSequences.push({
+        rowIndex,
+        colIndex,
+        baseWord,
+        targetWord,
+        operations,
+        currentOperation: 0,
+        currentWord: baseWord,
+        sentenceIndex,
+      });
+    });
+  });
+
+  return {
+    table,
+    sequences: allSequences,
+    currentSequenceIndex: 0,
+    isCompleted: false,
+  };
+};
