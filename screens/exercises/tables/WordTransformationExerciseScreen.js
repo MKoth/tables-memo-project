@@ -83,7 +83,7 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
           toValue: { x: cellLayout.x, y: cellLayout.y - headerHeight },
           duration: 400,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start(() => {
         resolve();
@@ -141,7 +141,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
       console.error(e);
     } finally {
       setAnimatingWord(null);
-      flyingWordPosition.setValue({ x: 0, y: 0 });
       flyingWordScale.setValue(1);
     }
   };
@@ -369,14 +368,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
         </View>
       )}
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{exerciseState.table.name}</Text>
-        <Text style={styles.subtitle}>
-          Transform words step by step • Cell {exerciseState.currentSequenceIndex + 1} of {exerciseState.sequences.length}
-        </Text>
-      </View>
-
       {/* Table with blinking cell */}
       <View style={styles.tableContainer}>
         <ScrollableTable
@@ -463,7 +454,6 @@ const styles = StyleSheet.create({
   tableContainer: {
     flex: 1,
     marginHorizontal: 10,
-    maxHeight: '40%',
   },
 
   buttonContainer: {

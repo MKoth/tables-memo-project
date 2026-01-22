@@ -94,13 +94,13 @@ const TableExerciseScreen = ({ navigation }) => {
           toValue: { x: endPos.x, y: endPos.y - headerHeight },
           duration: 400,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(flyingVariantWidth, {
           toValue: endPos.width,
           duration: 400,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true, // Width animation needs native driver false
+          useNativeDriver: false, // Width animation needs native driver false
         }),
       ]).start(() => {
         resolve();
@@ -177,7 +177,6 @@ const TableExerciseScreen = ({ navigation }) => {
         // Clean up animation state
         setAnimatingVariant(null);
         setSelectedVariantRef(null);
-        flyingVariantPosition.setValue({ x: 0, y: 0 });
         flyingVariantWidth.setValue(80); // Reset to default width
       }
 
@@ -364,29 +363,20 @@ const TableExerciseScreen = ({ navigation }) => {
           </Text>
         </View>
       )}
-      {/* Header - fixed at top */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{exerciseState.table.name}</Text>
-        <Text style={styles.subtitle}>
-          Fill the table with the correct conjugations
-        </Text>
-      </View>
 
-      {/* Content area - takes remaining space above buttons */}
-      <View style={styles.contentContainer}>
-        {/* Table - takes remaining space in content area */}
-        <View style={styles.tableContainer}>
-          <ScrollableTable
-            table={exerciseState.table}
-            onCellPress={handleCellPress}
-            showAnswers={exerciseState.showAnswers}
-            wrongCell={wrongCell}
-            getCellIsHovered={getCellIsHovered}
-            registerCellLayout={registerCellLayout}
-            draggedVariant={draggedVariant}
-            dragPosition={dragPosition}
-          />
-        </View>
+      {/* Table - takes remaining space in content area */}
+      <View style={styles.tableContainer}>
+        <ScrollableTable
+          table={exerciseState.table}
+          onCellPress={handleCellPress}
+          showAnswers={exerciseState.showAnswers}
+          wrongCell={wrongCell}
+          getCellIsHovered={getCellIsHovered}
+          registerCellLayout={registerCellLayout}
+          draggedVariant={draggedVariant}
+          dragPosition={dragPosition}
+        />
+      </View>
 
       {/* Variants List - constrained height within content area */}
       {!exerciseState.isCompleted && (
@@ -403,7 +393,6 @@ const TableExerciseScreen = ({ navigation }) => {
           />
         </View>
       )}
-      </View>
 
       {/* Drag Overlay - renders dragged variant at global level */}
       <DragOverlay
@@ -525,16 +514,12 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: 'ComicSansMS',
   },
-  contentContainer: {
-    flex: 1,
-  },
   tableContainer: {
     flex: 1,
     marginHorizontal: 10,
-    minHeight: 150,
   },
   variantsContainer: {
-    maxHeight: '30vh',
+    flex: 1,
   },
   feedbackContainer: {
     position: 'absolute',

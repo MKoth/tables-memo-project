@@ -42,10 +42,10 @@ const performInsertOperation = (operation, letters, sequence, operationIndex) =>
 };
 
 const AnimatedWord = ({ sequence, operation, selectedLetters, wordDisplayRef, onLetterPress }) => {
-  if (!sequence) return null;
-
   const [prevSequence, setPrevSequence] = useState(null);
   const [letters, setLetters] = useState([]);
+
+  if (!sequence) return null;
 
   useEffect(
     () => {

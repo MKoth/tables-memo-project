@@ -90,6 +90,7 @@ const VariantsList = ({
       <Text style={styles.title}>Drag a variant or tap to select:</Text>
       <VerticalArrowedScrollView
         style={styles.scrollContainer}
+        scrollViewStyle={{ flex: 1 }}
         contentContainerStyle={styles.variantsContainer}
         arrowsContainerStyle={styles.arrowsContainer}
         upArrowStyle={styles.upArrow}
@@ -133,6 +134,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    flex: 1,
   },
   title: {
     fontSize: 16,
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Comic Sans MS',
   },
   scrollContainer: {
-    maxHeight: '20vh',
+    flex: 1,
   },
   variantsContainer: {
     flexDirection: 'row',
