@@ -3,8 +3,6 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const ScrollHandle = ({ direction, onPress, visible }) => {
-  if (!visible) return null;
-
   const getIconName = () => {
     switch (direction) {
       case 'left': return 'chevron-back';
@@ -30,6 +28,8 @@ const ScrollHandle = ({ direction, onPress, visible }) => {
     }
   };
 
+  if (!visible) return null;
+
   return (
     <TouchableOpacity
       style={[styles.handle, getPositionStyle()]}
@@ -54,25 +54,30 @@ const ScrollHandles = ({
   dragPosition,
   mainTableBodyLayout,
 }) => {
-  if (!showHandles) return null;
-
   // Auto-scroll when hovering over handles
   React.useEffect(() => {
     if (!dragPosition || !mainTableBodyLayout) return;
 
     const { x, y } = dragPosition;
+    
     // Define edge zones
-    const edgeThreshold = 100; // Larger threshold for easier triggering
+    const edgeThreshold = 30; // Larger threshold for easier triggering
 
-    const nearLeft = x >= mainTableBodyLayout.left && x <= mainTableBodyLayout.left + edgeThreshold &&
-                     y >= mainTableBodyLayout.top && y <= mainTableBodyLayout.top + mainTableBodyLayout.height &&
+    const tableBodyLeft = mainTableBodyLayout.x;
+    const tableBodyTop = mainTableBodyLayout.y;
+    const tableBodyRight = tableBodyLeft + mainTableBodyLayout.width;
+    const tableBodyBottom = tableBodyTop + mainTableBodyLayout.height;
+
+
+    const nearLeft = x >= tableBodyLeft && x <= tableBodyLeft + edgeThreshold &&
+                     y >= tableBodyTop && y <= tableBodyBottom &&
                      canScrollLeft;
-    const nearRight = x >= (mainTableBodyLayout.left + mainTableBodyLayout.width - edgeThreshold) && x <= mainTableBodyLayout.left + mainTableBodyLayout.width &&
-                      y >= mainTableBodyLayout.top && y <= mainTableBodyLayout.top + mainTableBodyLayout.height &&
+    const nearRight = x >= (tableBodyRight - edgeThreshold) && x <= tableBodyRight &&
+                      y >= tableBodyTop && y <= tableBodyBottom &&
                       canScrollRight;
-    const nearTop = y >= mainTableBodyLayout.top && y <= mainTableBodyLayout.top + edgeThreshold && canScrollUp;
-    const nearBottom = y >= (mainTableBodyLayout.top + mainTableBodyLayout.height - edgeThreshold) && y <= mainTableBodyLayout.top + mainTableBodyLayout.height && canScrollDown;
-
+    const nearTop = y >= tableBodyTop && y <= tableBodyTop + edgeThreshold && canScrollUp;
+    const nearBottom = y >= (tableBodyBottom - edgeThreshold) && y <= tableBodyBottom && canScrollDown;
+    
     // Trigger scroll based on edge proximity
     if (nearLeft) {
       onScrollLeft();
@@ -85,6 +90,8 @@ const ScrollHandles = ({
     }
 
   }, [dragPosition, canScrollLeft, canScrollRight, canScrollUp, canScrollDown, onScrollLeft, onScrollRight, onScrollUp, onScrollDown]);
+
+  if (!showHandles) return null;
 
   return (
     <View style={styles.container} pointerEvents="box-none">

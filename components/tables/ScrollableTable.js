@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } f
 import { View, ScrollView, StyleSheet, Text } from 'react-native';
 import TableCell from './TableCell';
 import ScrollHandles from './ScrollHandles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CELL_WIDTH = 80;
 const CELL_HEIGHT = 40;
+
+const SCROLL_THROTTLE = 100; // milliseconds
 
 const ScrollableTable = forwardRef(({
   table,
@@ -18,7 +21,7 @@ const ScrollableTable = forwardRef(({
   blinkingCell = null,
   blinkAnimation = null,
 }, ref) => {
-  const scrollSpeed = 10;
+  const scrollSpeed = 5;
   const [firstColumnWidth, setFirstColumnWidth] = useState(80);
   const [tableHeight, setTableHeight] = useState(300);
   const [viewportSize, setViewportSize] = useState({ width: 400, height: 300 }); // Default fallback
@@ -26,7 +29,8 @@ const ScrollableTable = forwardRef(({
     horizontal: { offset: 0, maxOffset: 0, canScrollLeft: false, canScrollRight: false },
     vertical: { offset: 0, maxOffset: 0, canScrollUp: false, canScrollDown: false },
   });
-  const [mainTableBodyLayout, setMainTableBodyLayout] = useState(null);
+  const [mainTableBodyScreenLayout, setMainTableBodyScreenLayout] = useState(null);
+  const mainBodyRef = useRef(null);
 
   // Refs for scroll synchronization
   const headerScrollRef = useRef(null);
@@ -41,28 +45,24 @@ const ScrollableTable = forwardRef(({
   // Scroll synchronization functions
   const syncHorizontalScroll = (scrollX) => {
     if (isSyncingHorizontal.current) return;
-    isSyncingHorizontal.current = true;
-
     headerScrollRef.current?.scrollTo({ x: scrollX, animated: false });
     bodyHorizontalScrollRef.current?.scrollTo({ x: scrollX, animated: false });
+    isSyncingHorizontal.current = true;
 
-    // Reset after a short delay to allow the scroll to complete
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       isSyncingHorizontal.current = false;
-    }, 5);
+    });
   };
 
   const syncVerticalScroll = (scrollY) => {
     if (isSyncingVertical.current) return;
-    isSyncingVertical.current = true;
-
     columnScrollRef.current?.scrollTo({ y: scrollY, animated: false });
     bodyVerticalScrollRef.current?.scrollTo({ y: scrollY, animated: false });
+    isSyncingVertical.current = true;
 
-    // Reset after a short delay to allow the scroll to complete
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       isSyncingVertical.current = false;
-    }, 5);
+    });
   };
 
   // Update scroll state and handle availability
@@ -149,6 +149,8 @@ const ScrollableTable = forwardRef(({
     }
   }));
 
+  const insets = useSafeAreaInsets();
+
   useEffect(() => {
     // Calculate the maximum width needed for the first column
     const tempTextWidths = [];
@@ -191,7 +193,7 @@ const ScrollableTable = forwardRef(({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.headerContent}
           onScroll={handleHeaderScroll}
-          scrollEventThrottle={16}
+          scrollEventThrottle={SCROLL_THROTTLE}
         >
           {table.columns.map((col, index) => (
             <View key={index} style={[styles.headerCell, { width: CELL_WIDTH }]}>
@@ -211,7 +213,7 @@ const ScrollableTable = forwardRef(({
           bottom: 8, // Fill to bottom of container
         }]}
         onScroll={handleColumnScroll}
-        scrollEventThrottle={16}
+        scrollEventThrottle={SCROLL_THROTTLE}
       >
         {table.rows.map((rowLabel, index) => (
           <View key={index} style={[styles.rowHeaderCell, { height: CELL_HEIGHT }]}>
@@ -222,6 +224,7 @@ const ScrollableTable = forwardRef(({
 
       {/* MAIN TABLE BODY - Both Horizontal and Vertical Scroll */}
       <View
+        ref={mainBodyRef}
         style={[styles.mainBodyContainer, {
           left: firstColumnWidth,
           top: CELL_HEIGHT,
@@ -229,9 +232,17 @@ const ScrollableTable = forwardRef(({
           right: 8, // Leave space for container padding
         }]}
         onLayout={(event) => {
-          setMainTableBodyLayout(event.nativeEvent.layout);
-          const { width, height } = event.nativeEvent.layout;
+          console.log("Main body layout event:", insets);
+          const layout = event.nativeEvent.layout;
+          const { width, height } = layout;
           setViewportSize({ width, height });
+
+          // Measure screen coordinates and adjust for header offset
+          if (mainBodyRef.current) {
+            mainBodyRef.current.measureInWindow((x, y, width, height) => {
+              setMainTableBodyScreenLayout({ x, y: y - insets.top, width, height });
+            });
+          }
 
           // Update scroll offsets with actual viewport dimensions
           const CELL_MARGIN = 4;
@@ -254,13 +265,13 @@ const ScrollableTable = forwardRef(({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.bodyContent}
           onScroll={handleBodyHorizontalScroll}
-          scrollEventThrottle={16}
+          scrollEventThrottle={SCROLL_THROTTLE}
         >
           <ScrollView
             ref={bodyVerticalScrollRef}
             showsVerticalScrollIndicator={false}
             onScroll={handleBodyVerticalScroll}
-            scrollEventThrottle={16}
+            scrollEventThrottle={SCROLL_THROTTLE}
           >
             {table.cells.map((row, rowIndex) => (
               <View key={rowIndex} style={styles.bodyRow}>
@@ -308,7 +319,7 @@ const ScrollableTable = forwardRef(({
           onScrollDown={scrollDown}
           showHandles={!!draggedVariant} // Only show during drag operations
           dragPosition={dragPosition}
-          mainTableBodyLayout={mainTableBodyLayout}
+          mainTableBodyLayout={mainTableBodyScreenLayout}
         />
       </View>
     </View>

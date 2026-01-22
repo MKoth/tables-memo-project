@@ -112,7 +112,7 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
           toValue: { x: sentencePos.x, y: sentencePos.y - headerHeight },
           duration: 400,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start(() => {
         resolve();
@@ -155,7 +155,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
       console.error(e);
     } finally {
       setAnimatingWord(null);
-      flyingWordPosition.setValue({ x: 0, y: 0 });
       flyingWordScale.setValue(1);
     }
   };

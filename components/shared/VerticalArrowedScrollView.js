@@ -6,6 +6,7 @@ const VerticalArrowedScrollView = ({
   children,
   style,
   contentContainerStyle,
+  scrollViewStyle,
   showsVerticalScrollIndicator = false,
   scrollEventThrottle = 16,
   arrowsContainerStyle,
@@ -56,17 +57,20 @@ const VerticalArrowedScrollView = ({
   };
 
   const scrollToTop = () => {
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
+    const scrollRefCurrent = scrollRef.current || scrollViewProps.ref?.current;
+    scrollRefCurrent?.scrollTo({ y: 0, animated: true });
   };
 
   const scrollToBottom = () => {
-    scrollRef.current?.scrollToEnd({ animated: true });
+    const scrollRefCurrent = scrollRef.current || scrollViewProps.ref?.current;
+    scrollRefCurrent?.scrollToEnd({ animated: true });
   };
 
   return (
     <View style={style}>
       <ScrollView
         ref={scrollRef}
+        style={scrollViewStyle}
         showsVerticalScrollIndicator={showsVerticalScrollIndicator}
         contentContainerStyle={contentContainerStyle}
         onScroll={handleScroll}

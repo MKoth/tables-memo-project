@@ -66,14 +66,6 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
           isImplemented: false,
         },
         {
-          id: 'matching',
-          name: 'Word Matching',
-          description: 'Match words with their translations',
-          icon: '🔗',
-          difficulty: 'Beginner',
-          isImplemented: false,
-        },
-        {
           id: 'sentence-building',
           name: 'Sentence Building',
           description: 'Build sentences using learned vocabulary',

@@ -83,6 +83,7 @@ const TransformationWorkspace = forwardRef(({
     <VerticalArrowedScrollView
       ref={ref}
       style={styles.workspaceContainer}
+      scrollViewStyle={{ flex: 1 }}
       contentContainerStyle={styles.workspaceContent}
       arrowsContainerStyle={styles.arrowsContainer}
       upArrowStyle={styles.upArrow}
