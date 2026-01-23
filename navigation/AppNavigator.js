@@ -11,6 +11,7 @@ import ExerciseSelectionScreen from '../screens/selection/ExerciseSelectionScree
 import FillCellsExerciseScreen from '../screens/exercises/tables/FillCellsExerciseScreen';
 import WordTransformationExerciseScreen from '../screens/exercises/tables/WordTransformationExerciseScreen';
 import SentenceFittingExerciseScreen from '../screens/exercises/tables/SentenceFittingExerciseScreen';
+import MultipleChoiceTranslationExerciseScreen from '../screens/exercises/words/MultipleChoiceTranslationExerciseScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -68,6 +69,11 @@ const AppNavigator = () => {
           name="SentenceFittingExercise"
           component={SentenceFittingExerciseScreen}
           options={{ title: 'Sentence Fitting' }}
+        />
+        <Stack.Screen
+          name="MultipleChoiceTranslationExercise"
+          component={MultipleChoiceTranslationExerciseScreen}
+          options={{ title: 'Multiple Choice Translation' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -1,6 +1,144 @@
 // Data Types & Structures for Table Exercises
 import DiffMatchPatch from 'diff-match-patch';
 
+// Vocabulary Data Structures
+export const createVocabularyWord = (
+  id,
+  nativeWord,
+  studiedWord,
+  topic,
+  difficulty = 'beginner'
+) => ({
+  id,
+  nativeWord,
+  studiedWord,
+  topic,
+  difficulty,
+  correctCount: 0,
+  incorrectCount: 0,
+});
+
+export const createVocabularyTopic = (
+  id,
+  name,
+  description,
+  words
+) => ({
+  id,
+  name,
+  description,
+  words,
+});
+
+// Sample vocabulary data
+export const sampleVocabularyTopics = [
+  createVocabularyTopic(
+    'greetings',
+    'Greetings & Introductions',
+    'Common phrases for meeting people',
+    [
+      createVocabularyWord('g1', 'Hello', 'Hola', 'greetings'),
+      createVocabularyWord('g2', 'Good morning', 'Buenos días', 'greetings'),
+      createVocabularyWord('g3', 'Good afternoon', 'Buenas tardes', 'greetings'),
+      createVocabularyWord('g4', 'Good evening', 'Buenas noches', 'greetings'),
+      createVocabularyWord('g5', 'Goodbye', 'Adiós', 'greetings'),
+      createVocabularyWord('g6', 'Good night', 'Buenas noches', 'greetings'),
+      createVocabularyWord('g7', 'See you later', 'Hasta luego', 'greetings'),
+      createVocabularyWord('g8', 'See you tomorrow', 'Hasta mañana', 'greetings'),
+      createVocabularyWord('g9', 'What is your name?', '¿Cómo te llamas?', 'greetings'),
+      createVocabularyWord('g10', 'My name is...', 'Me llamo...', 'greetings'),
+    ]
+  ),
+  createVocabularyTopic(
+    'food_drink',
+    'Food & Drink',
+    'Vocabulary for restaurants and cooking',
+    [
+      createVocabularyWord('f1', 'Water', 'Agua', 'food_drink'),
+      createVocabularyWord('f2', 'Bread', 'Pan', 'food_drink'),
+      createVocabularyWord('f3', 'Cheese', 'Queso', 'food_drink'),
+      createVocabularyWord('f4', 'Meat', 'Carne', 'food_drink'),
+      createVocabularyWord('f5', 'Fish', 'Pescado', 'food_drink'),
+      createVocabularyWord('f6', 'Vegetables', 'Verduras', 'food_drink'),
+      createVocabularyWord('f7', 'Fruit', 'Fruta', 'food_drink'),
+      createVocabularyWord('f8', 'Coffee', 'Café', 'food_drink'),
+      createVocabularyWord('f9', 'Tea', 'Té', 'food_drink'),
+      createVocabularyWord('f10', 'Wine', 'Vino', 'food_drink'),
+      createVocabularyWord('f11', 'Beer', 'Cerveza', 'food_drink'),
+      createVocabularyWord('f12', 'Milk', 'Leche', 'food_drink'),
+      createVocabularyWord('f13', 'Eggs', 'Huevos', 'food_drink'),
+      createVocabularyWord('f14', 'Rice', 'Arroz', 'food_drink'),
+      createVocabularyWord('f15', 'Pasta', 'Pasta', 'food_drink'),
+    ]
+  ),
+  createVocabularyTopic(
+    'family',
+    'Family Members',
+    'Words for describing family relationships',
+    [
+      createVocabularyWord('fm1', 'Family', 'Familia', 'family'),
+      createVocabularyWord('fm2', 'Father', 'Padre', 'family'),
+      createVocabularyWord('fm3', 'Mother', 'Madre', 'family'),
+      createVocabularyWord('fm4', 'Son', 'Hijo', 'family'),
+      createVocabularyWord('fm5', 'Daughter', 'Hija', 'family'),
+      createVocabularyWord('fm6', 'Brother', 'Hermano', 'family'),
+      createVocabularyWord('fm7', 'Sister', 'Hermana', 'family'),
+      createVocabularyWord('fm8', 'Grandfather', 'Abuelo', 'family'),
+      createVocabularyWord('fm9', 'Grandmother', 'Abuela', 'family'),
+      createVocabularyWord('fm10', 'Uncle', 'Tío', 'family'),
+      createVocabularyWord('fm11', 'Aunt', 'Tía', 'family'),
+      createVocabularyWord('fm12', 'Cousin (male)', 'Primo', 'family'),
+      createVocabularyWord('fm13', 'Cousin (female)', 'Prima', 'family'),
+    ]
+  ),
+];
+
+export const getWordsForTopics = (topicIds) => {
+  return sampleVocabularyTopics
+    .filter(topic => topicIds.includes(topic.id))
+    .flatMap(topic => topic.words);
+};
+
+export const createMultipleChoiceExercise = (words, direction = 'native-to-studied') => {
+  // Shuffle words for random order
+  const shuffledWords = shuffleArray([...words]);
+  
+  // Create questions with multiple choices
+  const questions = shuffledWords.map((word, index) => {
+    // Determine question and correct answer based on direction
+    const questionWord = direction === 'native-to-studied' ? word.nativeWord : word.studiedWord;
+    const correctAnswer = direction === 'native-to-studied' ? word.studiedWord : word.nativeWord;
+    
+    // Get 3 other wrong answers from the same topic
+    const sameTopicWords = words.filter(w => w.topic === word.topic && w.id !== word.id);
+    const wrongAnswers = shuffleArray(sameTopicWords)
+      .slice(0, 3)
+      .map(w => direction === 'native-to-studied' ? w.studiedWord : w.nativeWord);
+    
+    // Combine correct and wrong answers and shuffle
+    const allChoices = shuffleArray([correctAnswer, ...wrongAnswers]);
+    
+    return {
+      id: `q${index}`,
+      wordId: word.id,
+      question: questionWord,
+      correctAnswer,
+      choices: allChoices,
+      isCorrect: null, // null = not answered, true = correct, false = incorrect
+    };
+  });
+  
+  return {
+    questions,
+    currentQuestionIndex: 0,
+    direction,
+    score: 0,
+    total: questions.length,
+    isCompleted: false,
+  };
+};
+
+
 // CellData structure
 export const createCellData = (
   row,

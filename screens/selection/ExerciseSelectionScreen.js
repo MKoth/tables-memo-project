@@ -55,7 +55,7 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
           description: 'Choose the correct translation from options',
           icon: '❓',
           difficulty: 'Beginner',
-          isImplemented: false,
+          isImplemented: true,
         },
         {
           id: 'typing',
@@ -102,6 +102,13 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
       });
     } else if (learningType === 'tables' && exercise.id === 'sentence-fitting') {
       navigation.navigate('SentenceFittingExercise', {
+        selectedLanguage,
+        learningType,
+        selectedTopics,
+        exerciseType: exercise.id,
+      });
+    } else if (learningType === 'words' && exercise.id === 'multiple-choice') {
+      navigation.navigate('MultipleChoiceTranslationExercise', {
         selectedLanguage,
         learningType,
         selectedTopics,
