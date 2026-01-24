@@ -63,7 +63,7 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
           description: 'Type the correct translation',
           icon: '⌨️',
           difficulty: 'Intermediate',
-          isImplemented: false,
+          isImplemented: true,
         },
         {
           id: 'sentence-building',
@@ -109,6 +109,13 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
       });
     } else if (learningType === 'words' && exercise.id === 'multiple-choice') {
       navigation.navigate('MultipleChoiceTranslationExercise', {
+        selectedLanguage,
+        learningType,
+        selectedTopics,
+        exerciseType: exercise.id,
+      });
+    } else if (learningType === 'words' && exercise.id === 'typing') {
+      navigation.navigate('TypingTranslationExercise', {
         selectedLanguage,
         learningType,
         selectedTopics,
