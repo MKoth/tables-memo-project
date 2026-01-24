@@ -102,22 +102,22 @@ export const getWordsForTopics = (topicIds) => {
 export const createMultipleChoiceExercise = (words, direction = 'native-to-studied') => {
   // Shuffle words for random order
   const shuffledWords = shuffleArray([...words]);
-  
+
   // Create questions with multiple choices
   const questions = shuffledWords.map((word, index) => {
     // Determine question and correct answer based on direction
     const questionWord = direction === 'native-to-studied' ? word.nativeWord : word.studiedWord;
     const correctAnswer = direction === 'native-to-studied' ? word.studiedWord : word.nativeWord;
-    
+
     // Get 3 other wrong answers from the same topic
     const sameTopicWords = words.filter(w => w.topic === word.topic && w.id !== word.id);
     const wrongAnswers = shuffleArray(sameTopicWords)
       .slice(0, 3)
       .map(w => direction === 'native-to-studied' ? w.studiedWord : w.nativeWord);
-    
+
     // Combine correct and wrong answers and shuffle
     const allChoices = shuffleArray([correctAnswer, ...wrongAnswers]);
-    
+
     return {
       id: `q${index}`,
       wordId: word.id,
@@ -127,7 +127,41 @@ export const createMultipleChoiceExercise = (words, direction = 'native-to-studi
       isCorrect: null, // null = not answered, true = correct, false = incorrect
     };
   });
-  
+
+  return {
+    questions,
+    currentQuestionIndex: 0,
+    direction,
+    score: 0,
+    total: questions.length,
+    isCompleted: false,
+  };
+};
+
+export const createTypingExercise = (words, direction = 'native-to-studied') => {
+  // Shuffle words for random order
+  const shuffledWords = shuffleArray([...words]);
+
+  // Create questions with text input
+  const questions = shuffledWords.map((word, index) => {
+    // Determine question and correct answer based on direction
+    const questionWord = direction === 'native-to-studied' ? word.nativeWord : word.studiedWord;
+    const correctAnswer = direction === 'native-to-studied' ? word.studiedWord : word.nativeWord;
+
+    // Set max input length to twice the length of correct answer
+    const maxLength = correctAnswer.length * 2;
+
+    return {
+      id: `q${index}`,
+      wordId: word.id,
+      question: questionWord,
+      correctAnswer,
+      userInput: '',
+      isCorrect: null, // null = not answered, true = correct, false = incorrect
+      maxLength,
+    };
+  });
+
   return {
     questions,
     currentQuestionIndex: 0,
