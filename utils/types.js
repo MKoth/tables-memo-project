@@ -172,6 +172,56 @@ export const createTypingExercise = (words, direction = 'native-to-studied') => 
   };
 };
 
+export const createMatchingColumnsExercise = (words, direction = 'native-to-studied') => {
+  // Determine which side is native and which is studied
+  const leftIsNative = direction === 'native-to-studied';
+
+  // Create word objects with display text and correct pairing
+  const wordPairs = words.map((word, index) => {
+    const leftText = leftIsNative ? word.nativeWord : word.studiedWord;
+    const rightText = leftIsNative ? word.studiedWord : word.nativeWord;
+
+    return {
+      index,
+      leftText,
+      rightText,
+      leftId: `left-${index}`,
+      rightId: `right-${index}`,
+      wordId: word.id,
+      topic: word.topic,
+    };
+  });
+
+  // Shuffle left and right separately to create mismatched display
+  const leftWords = shuffleArray(wordPairs.map(pair => ({
+    id: pair.leftId,
+    text: pair.leftText,
+    wordIndex: pair.index,
+    correctMatch: pair.rightId,
+  })));
+
+  const rightWords = shuffleArray(wordPairs.map(pair => ({
+    id: pair.rightId,
+    text: pair.rightText,
+    wordIndex: pair.index,
+    correctMatch: pair.leftId,
+  })));
+
+  // Create correct matches array (pairs of [leftId, rightId])
+  const matches = wordPairs.map(pair => [pair.leftId, pair.rightId]);
+
+  return {
+    leftWords,
+    rightWords,
+    matches,
+    currentMatches: [],
+    direction,
+    score: 0,
+    total: wordPairs.length,
+    isCompleted: false,
+  };
+};
+
 
 // CellData structure
 export const createCellData = (
