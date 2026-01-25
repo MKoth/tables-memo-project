@@ -84,7 +84,7 @@ The app navigation has been completely reorganized for better scalability and us
 
 ### **Current Implementation Status**
 - ✅ **Table Exercises**: Fill Cells, Word Transformations (fully implemented)
-- ✅ **Word Exercises**: Multiple Choice Translation (fully implemented), Typing, Matching (placeholders)
+- ✅ **Word Exercises**: Multiple Choice Translation, Typing Translation (fully implemented), Matching (placeholders)
 - ✅ **Navigation Flow**: Complete and tested
 - ✅ **Component Structure**: Properly organized by domain
 
@@ -126,7 +126,7 @@ The app navigation has been completely reorganized for better scalability and us
 ### Word Learning Flow
 - Multi-select words/categories or spaced repetition queue
 - Multiple choice translations ✅ **IMPLEMENTED**
-- Typing/audio input exercises
+- Typing/audio input exercises ✅ **IMPLEMENTED**
 - Matching columns
 - Progressive hints (sentences, associations)
 
