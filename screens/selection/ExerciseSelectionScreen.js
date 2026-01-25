@@ -66,6 +66,14 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
           isImplemented: true,
         },
         {
+          id: 'matching-columns',
+          name: 'Matching Columns',
+          description: 'Match words between left and right columns',
+          icon: '🔗',
+          difficulty: 'Intermediate',
+          isImplemented: true,
+        },
+        {
           id: 'sentence-building',
           name: 'Sentence Building',
           description: 'Build sentences using learned vocabulary',
@@ -116,6 +124,13 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
       });
     } else if (learningType === 'words' && exercise.id === 'typing') {
       navigation.navigate('TypingTranslationExercise', {
+        selectedLanguage,
+        learningType,
+        selectedTopics,
+        exerciseType: exercise.id,
+      });
+    } else if (learningType === 'words' && exercise.id === 'matching-columns') {
+      navigation.navigate('MatchingColumnsExercise', {
         selectedLanguage,
         learningType,
         selectedTopics,

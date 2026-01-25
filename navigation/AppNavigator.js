@@ -13,6 +13,7 @@ import WordTransformationExerciseScreen from '../screens/exercises/tables/WordTr
 import SentenceFittingExerciseScreen from '../screens/exercises/tables/SentenceFittingExerciseScreen';
 import MultipleChoiceTranslationExerciseScreen from '../screens/exercises/words/MultipleChoiceTranslationExerciseScreen';
 import TypingTranslationExerciseScreen from '../screens/exercises/words/TypingTranslationExerciseScreen';
+import MatchingColumnsExerciseScreen from '../screens/exercises/words/MatchingColumnsExerciseScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -80,6 +81,11 @@ const AppNavigator = () => {
           name="TypingTranslationExercise"
           component={TypingTranslationExerciseScreen}
           options={{ title: 'Typing Translation' }}
+        />
+        <Stack.Screen
+          name="MatchingColumnsExercise"
+          component={MatchingColumnsExerciseScreen}
+          options={{ title: 'Matching Columns' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
