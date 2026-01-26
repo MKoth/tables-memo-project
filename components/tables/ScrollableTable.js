@@ -232,7 +232,6 @@ const ScrollableTable = forwardRef(({
           right: 8, // Leave space for container padding
         }]}
         onLayout={(event) => {
-          console.log("Main body layout event:", insets);
           const layout = event.nativeEvent.layout;
           const { width, height } = layout;
           setViewportSize({ width, height });

@@ -4,8 +4,100 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Animated as RNAnimated,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+
+
+
+const MatchingWordItem = React.memo(({
+  item,
+  isSelected,
+  isHovered,
+  isFadingOut,
+  isWrongMatch,
+  onWordPress,
+  handleWordLayout,
+  onDragStart,
+  onDragEnd,
+  onDragUpdate,
+}) => {
+  const dragOffset = useSharedValue({ x: 0, y: 0 });
+  const isDragging = useSharedValue(false);
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    if (isFadingOut) {
+      opacity.value = withTiming(0, { duration: 300 });
+    } else {
+      opacity.value = 1;
+    }
+  }, [isFadingOut]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [
+      { translateX: dragOffset.value.x },
+      { translateY: dragOffset.value.y },
+    ],
+  }));
+
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      'worklet';
+      isDragging.value = true;
+      scheduleOnRN(onDragStart, item.id, item.text);
+    })
+    .onUpdate((event) => {
+      'worklet';
+      dragOffset.value = {
+        x: event.translationX,
+        y: event.translationY,
+      };
+      scheduleOnRN(onDragUpdate, item.id, event.absoluteX, event.absoluteY);
+    })
+    .onEnd(() => {
+      'worklet';
+      isDragging.value = false;
+      dragOffset.value = { x: 0, y: 0 };
+      scheduleOnRN(onDragEnd, item.id);
+    });
+
+  return (
+    <GestureDetector gesture={panGesture}>
+      <Animated.View
+        style={[styles.wordContainer, animatedStyle]}
+        onLayout={(e) => {
+          handleWordLayout(item.id, e.nativeEvent.layout);
+        }}
+        pointerEvents={isFadingOut ? 'none' : 'auto'}
+      >
+        <View
+          style={[
+            styles.wordButton,
+            isSelected && styles.selectedWord,
+            isHovered && styles.hoveredWord,
+            isFadingOut && styles.successWord,
+            isWrongMatch && styles.errorWord,
+          ]}
+          onTouchEnd={() => !isFadingOut && onWordPress(item.id)}
+        >
+          <Text
+            style={[
+              styles.wordText,
+              isSelected && styles.selectedWordText,
+              (isFadingOut || isWrongMatch) && styles.matchWordText,
+            ]}
+            numberOfLines={1}
+          >
+            {item.text}
+          </Text>
+        </View>
+      </Animated.View>
+    </GestureDetector>
+  );
+});
 
 const MatchingColumn = ({
   words,
@@ -16,31 +108,11 @@ const MatchingColumn = ({
   wrongMatchIds,
   onWordPress,
   onLayoutChange,
+  onDragStart,
+  onDragEnd,
+  onDragUpdate,
 }) => {
   const wordLayouts = useRef(new Map()).current;
-  const fadeAnimValues = useRef(new Map()).current;
-
-  // Initialize fade animation values for each word
-  words.forEach((word) => {
-    if (!fadeAnimValues.has(word.id)) {
-      fadeAnimValues.set(word.id, new RNAnimated.Value(1));
-    }
-  });
-
-  // Update fade animations when fadingOutIds changes
-  useEffect(() => {
-    words.forEach((word) => {
-      const fadeAnim = fadeAnimValues.get(word.id);
-      if (fadeAnim) {
-        const isFadingOut = fadingOutIds.includes(word.id);
-        RNAnimated.timing(fadeAnim, {
-          toValue: isFadingOut ? 0 : 1,
-          duration: isFadingOut ? 300 : 0,
-          useNativeDriver: true,
-        }).start();
-      }
-    });
-  }, [fadingOutIds]);
 
   const handleWordLayout = useCallback(
     (wordId, layout) => {
@@ -56,48 +128,20 @@ const MatchingColumn = ({
       const isHovered = hoveredId === item.id;
       const isFadingOut = fadingOutIds.includes(item.id);
       const isWrongMatch = wrongMatchIds.includes(item.id);
-      const fadeAnim = fadeAnimValues.get(item.id) || new RNAnimated.Value(1);
 
       return (
-        <RNAnimated.View
-          style={[
-            styles.wordContainer,
-            {
-              opacity: fadeAnim,
-            },
-          ]}
-          onLayout={(e) => {
-            handleWordLayout(item.id, {
-              x: e.nativeEvent.layout.x,
-              y: e.nativeEvent.layout.y,
-              width: e.nativeEvent.layout.width,
-              height: e.nativeEvent.layout.height,
-            });
-          }}
-          pointerEvents={isFadingOut ? 'none' : 'auto'}
-        >
-          <View
-            style={[
-              styles.wordButton,
-              isSelected && styles.selectedWord,
-              isHovered && styles.hoveredWord,
-              isFadingOut && styles.successWord,
-              isWrongMatch && styles.errorWord,
-            ]}
-            onTouchEnd={() => !isFadingOut && onWordPress(item.id)}
-          >
-            <Text
-              style={[
-                styles.wordText,
-                isSelected && styles.selectedWordText,
-                (isFadingOut || isWrongMatch) && styles.matchWordText,
-              ]}
-              numberOfLines={1}
-            >
-              {item.text}
-            </Text>
-          </View>
-        </RNAnimated.View>
+        <MatchingWordItem
+          item={item}
+          isSelected={isSelected}
+          isHovered={isHovered}
+          isFadingOut={isFadingOut}
+          isWrongMatch={isWrongMatch}
+          onWordPress={onWordPress}
+          handleWordLayout={handleWordLayout}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragUpdate={onDragUpdate}
+        />
       );
     },
     [
@@ -105,9 +149,11 @@ const MatchingColumn = ({
       hoveredId,
       fadingOutIds,
       wrongMatchIds,
-      fadeAnimValues,
-      handleWordLayout,
       onWordPress,
+      handleWordLayout,
+      onDragStart,
+      onDragEnd,
+      onDragUpdate,
     ]
   );
 

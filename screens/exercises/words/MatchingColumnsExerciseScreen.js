@@ -4,10 +4,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
-  Animated as RNAnimated,
+  Dimensions,
 } from 'react-native';
 import MatchingColumn from '../../../components/words/MatchingColumn';
+import DragOverlay from '../../../components/tables/DragOverlay';
 import { createMatchingColumnsExercise, getWordsForTopics } from '../../../utils/types';
 
 const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
@@ -25,6 +25,8 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
   const [feedbackMessage, setFeedbackMessage] = useState(null);
   const [wrongMatchIds, setWrongMatchIds] = useState([]);
   const [fadingOutIds, setFadingOutIds] = useState([]);
+  const [draggedWord, setDraggedWord] = useState(null);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
   const feedbackTimeoutRef = useRef(null);
   const wrongMatchTimeoutRef = useRef(null);
@@ -177,6 +179,20 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     return Math.round((exerciseState.score / exerciseState.total) * 100);
   };
 
+  // Drag event handlers
+  const handleDragStart = useCallback((id, text) => {
+    setDraggedWord(text);
+  }, []);
+
+  const handleDragUpdate = useCallback((id, x, y) => {
+    setDragPosition({ x, y });
+  }, []);
+
+  const handleDragEnd = useCallback((id) => {
+    setDraggedWord(null);
+    setDragPosition({ x: 0, y: 0 });
+  }, []);
+
   if (exerciseState.isCompleted) {
     return (
       <View style={styles.completionContainer}>
@@ -253,6 +269,9 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           wrongMatchIds={wrongMatchIds}
           onWordPress={handleWordPress}
           onLayoutChange={handleLayoutChange(true)}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragUpdate={handleDragUpdate}
         />
 
         <View style={styles.divider} />
@@ -266,8 +285,29 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           wrongMatchIds={wrongMatchIds}
           onWordPress={handleWordPress}
           onLayoutChange={handleLayoutChange(false)}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragUpdate={handleDragUpdate}
         />
       </View>
+
+      {/* Drag Overlay */}
+      <DragOverlay
+        draggedVariant={draggedWord}
+        dragPosition={dragPosition}
+        isDragging={!!draggedWord}
+        customVariantStyles={{
+          paddingHorizontal: 15,
+          paddingVertical: 12,
+          borderRadius: 8,
+          minHeight: 46,
+          width: Dimensions.get('window').width / 2 - 45,
+          alignItems: 'flex-start',
+        }}
+        customTextStyles={{
+          textAlign: 'left',
+        }}
+      />
     </View>
   );
 };

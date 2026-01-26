@@ -1,13 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const DragOverlay = ({ draggedVariant, dragPosition, isDragging }) => {
+const DragOverlay = ({ draggedVariant, dragPosition, isDragging, customVariantStyles = {}, customTextStyles = {} }) => {
   const headerHeight = 64;
+  const insets = useSafeAreaInsets();
   const animatedStyle = useAnimatedStyle(() => ({
     position: 'absolute',
     left: dragPosition.x - 40, // Center the variant on the drag point (assuming 80px width / 2)
-    top: dragPosition.y - 20 - headerHeight,  // Center the variant + account for header height (64px)
+    top: dragPosition.y - insets.top - headerHeight,  // Center the variant + account for header height (64px)
     zIndex: 9999,
     opacity: isDragging ? 1 : 0,
   }), [dragPosition, isDragging]);
@@ -18,8 +20,8 @@ const DragOverlay = ({ draggedVariant, dragPosition, isDragging }) => {
 
   return (
     <Animated.View style={[styles.overlay, animatedStyle]}>
-      <View style={styles.variant}>
-        <Text style={styles.variantText}>{draggedVariant}</Text>
+      <View style={[styles.variant, customVariantStyles]}>
+        <Text style={[styles.variantText, customTextStyles]}>{draggedVariant}</Text>
       </View>
     </Animated.View>
   );
