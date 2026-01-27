@@ -8,8 +8,8 @@ const DragOverlay = ({ draggedVariant, dragPosition, isDragging, customVariantSt
   const insets = useSafeAreaInsets();
   const animatedStyle = useAnimatedStyle(() => ({
     position: 'absolute',
-    left: dragPosition.x - 40, // Center the variant on the drag point (assuming 80px width / 2)
-    top: dragPosition.y - insets.top - headerHeight,  // Center the variant + account for header height (64px)
+    left: dragPosition.x, // Center the variant on the drag point
+    top: dragPosition.y - headerHeight,  // Center the variant + account for header height (64px)
     zIndex: 9999,
     opacity: isDragging ? 1 : 0,
   }), [dragPosition, isDragging]);

@@ -397,7 +397,7 @@ const TableExerciseScreen = ({ navigation }) => {
       {/* Drag Overlay - renders dragged variant at global level */}
       <DragOverlay
         draggedVariant={draggedVariant}
-        dragPosition={dragPosition}
+        dragPosition={{ x: dragPosition.x - 35, y: dragPosition.y - 18 }} // Center the variant (assuming 80x40 size)
         isDragging={!!draggedVariant}
       />
 
