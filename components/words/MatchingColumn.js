@@ -19,6 +19,7 @@ const MatchingWordItem = React.memo(({
   isWrongMatch,
   onWordPress,
   handleWordLayout,
+  registerItemRef,
   onDragStart,
   onDragEnd,
   onDragUpdate,
@@ -26,6 +27,7 @@ const MatchingWordItem = React.memo(({
   const dragOffset = useSharedValue({ x: 0, y: 0 });
   const isDragging = useSharedValue(false);
   const opacity = useSharedValue(1);
+  const itemRef = useRef(null);
 
   useEffect(() => {
     if (isFadingOut) {
@@ -55,7 +57,14 @@ const MatchingWordItem = React.memo(({
         x: event.translationX,
         y: event.translationY,
       };
-      scheduleOnRN(onDragUpdate, item.id, event.absoluteX, event.absoluteY);
+      scheduleOnRN(
+        onDragUpdate,
+        item.id,
+        event.absoluteX,
+        event.absoluteY,
+        event.translationX,
+        event.translationY
+      );
     })
     .onEnd(() => {
       'worklet';
@@ -67,9 +76,27 @@ const MatchingWordItem = React.memo(({
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
+        ref={(r) => {
+          itemRef.current = r;
+          if (registerItemRef) {
+            // store or remove ref in parent map
+            registerItemRef(item.id, r);
+          }
+        }}
         style={[styles.wordContainer, animatedStyle]}
         onLayout={(e) => {
-          handleWordLayout(item.id, e.nativeEvent.layout);
+          // Try to measure absolute position in window for hit testing
+          try {
+            if (itemRef && itemRef.current && itemRef.current.measureInWindow) {
+              itemRef.current.measureInWindow((x, y, width, height) => {
+                handleWordLayout(item.id, { x, y, width, height });
+              });
+            } else {
+              handleWordLayout(item.id, e.nativeEvent.layout);
+            }
+          } catch (err) {
+            handleWordLayout(item.id, e.nativeEvent.layout);
+          }
         }}
         pointerEvents={isFadingOut ? 'none' : 'auto'}
       >
@@ -111,8 +138,30 @@ const MatchingColumn = ({
   onDragStart,
   onDragEnd,
   onDragUpdate,
+  measureSignal,
 }) => {
+  // Map to store word layouts by id
   const wordLayouts = useRef(new Map()).current;
+  const itemRefs = useRef(new Map()).current;
+
+  // Remove layouts for words that are no longer present
+  useEffect(() => {
+    const wordIds = new Set(words.map(w => w.id));
+    // Remove any layout for words not in the current list
+    for (const id of Array.from(wordLayouts.keys())) {
+      if (!wordIds.has(id)) {
+        wordLayouts.delete(id);
+        // Optionally, notify parent that this word is gone
+        onLayoutChange(id, null);
+      }
+    }
+    // Also remove any refs for words that disappeared
+    for (const id of Array.from(itemRefs.keys())) {
+      if (!wordIds.has(id)) {
+        itemRefs.delete(id);
+      }
+    }
+  }, [words, wordLayouts, onLayoutChange]);
 
   const handleWordLayout = useCallback(
     (wordId, layout) => {
@@ -121,6 +170,36 @@ const MatchingColumn = ({
     },
     [wordLayouts, onLayoutChange]
   );
+
+  const registerItemRef = useCallback((wordId, node) => {
+    if (node) {
+      itemRefs.set(wordId, node);
+    } else {
+      itemRefs.delete(wordId);
+    }
+  }, [itemRefs]);
+
+  const handleScroll = useCallback(() => {
+    // Re-measure visible items using their refs and update layouts
+    for (const [wordId, ref] of itemRefs.entries()) {
+      try {
+        if (ref && ref.measureInWindow) {
+          ref.measureInWindow((x, y, width, height) => {
+            handleWordLayout(wordId, { x, y, width, height });
+          });
+        }
+      } catch (err) {
+        // ignore measurement errors
+      }
+    }
+  }, [itemRefs, handleWordLayout]);
+
+  useEffect(() => {
+    // Re-measure when parent signals positions may have shifted
+    if (typeof measureSignal !== 'undefined') {
+      handleScroll();
+    }
+  }, [measureSignal, handleScroll]);
 
   const renderWord = useCallback(
     ({ item }) => {
@@ -138,6 +217,7 @@ const MatchingColumn = ({
           isWrongMatch={isWrongMatch}
           onWordPress={onWordPress}
           handleWordLayout={handleWordLayout}
+          registerItemRef={registerItemRef}
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
           onDragUpdate={onDragUpdate}
@@ -163,6 +243,9 @@ const MatchingColumn = ({
         data={words}
         renderItem={renderWord}
         keyExtractor={(item) => item.id}
+        extraData={{ hoveredId, fadingOutIds, wrongMatchIds, selectedId }}
+        onScroll={() => handleScroll()}
+        scrollEventThrottle={100}
         scrollEnabled={true}
         showsVerticalScrollIndicator={true}
         bounces={false}

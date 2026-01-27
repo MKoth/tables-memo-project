@@ -27,11 +27,13 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
   const [fadingOutIds, setFadingOutIds] = useState([]);
   const [draggedWord, setDraggedWord] = useState(null);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [measureSignal, setMeasureSignal] = useState(0);
 
   const feedbackTimeoutRef = useRef(null);
   const wrongMatchTimeoutRef = useRef(null);
   const leftWordLayouts = useRef(new Map()).current;
   const rightWordLayouts = useRef(new Map()).current;
+  const dragStartLayoutsRef = useRef(new Map());
 
   // Show feedback message for 2 seconds
   const showFeedbackMessage = (message) => {
@@ -48,6 +50,11 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
   const handleLayoutChange = useCallback(
     (isLeft) => (wordId, layout) => {
       const layouts = isLeft ? leftWordLayouts : rightWordLayouts;
+      if (!layout) {
+        // remove layout when word disappears
+        layouts.delete(wordId);
+        return;
+      }
       layouts.set(wordId, {
         x: layout.x,
         y: layout.y,
@@ -138,6 +145,9 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           prev.filter((id) => id !== leftId && id !== rightId)
         );
 
+          // Trigger re-measure of remaining items (positions changed)
+          setMeasureSignal((s) => s + 1);
+
         showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
 
         if (
@@ -181,17 +191,87 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
 
   // Drag event handlers
   const handleDragStart = useCallback((id, text) => {
+    const isLeftDrag = exerciseState.leftWords.some(w => w.id === id);
+    if (isLeftDrag) {
+      setSelectedLeft(id);
+      setSelectedRight(null);
+    } else {
+      setSelectedRight(id);
+      setSelectedLeft(null);
+    }
+    // Store the starting layout for this dragged item (if available)
+    const startLayouts = isLeftDrag ? leftWordLayouts : rightWordLayouts;
+    const startLayout = startLayouts.get(id);
+    if (startLayout) {
+      dragStartLayoutsRef.current.set(id, startLayout);
+    }
     setDraggedWord(text);
-  }, []);
+  }, [exerciseState.leftWords, leftWordLayouts, rightWordLayouts]);
 
-  const handleDragUpdate = useCallback((id, x, y) => {
-    setDragPosition({ x, y });
-  }, []);
+  const handleDragUpdate = useCallback((id, absX, absY, translationX, translationY) => {
+    // Compute position from the stored start layout + translation if available
+    const start = dragStartLayoutsRef.current.get(id);
+    let px = absX;
+    let py = absY;
+    if (start && typeof translationX === 'number' && typeof translationY === 'number') {
+      px = start.x + translationX;
+      py = start.y + translationY;
+    }
+
+    setDragPosition({ x: px, y: py });
+
+    // Determine which column the drag originated from (check current visible words)
+    const isLeftDrag = exerciseState.leftWords.some(w => w.id === id);
+    const targetLayouts = isLeftDrag ? rightWordLayouts : leftWordLayouts;
+
+    let foundHovered = null;
+    for (const [wordId, layout] of targetLayouts.entries()) {
+      if (!layout) continue;
+      if (
+        absX >= layout.x &&
+        absX <= layout.x + layout.width &&
+        absY >= layout.y &&
+        absY <= layout.y + layout.height
+      ) {
+        foundHovered = wordId;
+        break;
+      }
+    }
+
+    setHoveredId(foundHovered);
+  }, [exerciseState, leftWordLayouts, rightWordLayouts]);
 
   const handleDragEnd = useCallback((id) => {
+    if (hoveredId != null) {
+      const isLeftDrag = exerciseState.leftWords.some(w => w.id === id);
+      let leftId, rightId;
+      if (isLeftDrag) {
+        leftId = id;
+        rightId = hoveredId;
+      } else {
+        leftId = hoveredId;
+        rightId = id;
+      }
+
+      const matched = attemptMatch(leftId, rightId);
+      if (matched) {
+        setSelectedLeft(null);
+        setSelectedRight(null);
+      } else {
+        if (isLeftDrag) {
+          setSelectedLeft(null);
+        } else {
+          setSelectedRight(null);
+        }
+      }
+    }
+
     setDraggedWord(null);
     setDragPosition({ x: 0, y: 0 });
-  }, []);
+    setHoveredId(null);
+    // cleanup stored start layout
+    dragStartLayoutsRef.current.delete(id);
+  }, [exerciseState.leftWords, hoveredId, attemptMatch]);
 
   if (exerciseState.isCompleted) {
     return (
@@ -272,6 +352,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragUpdate={handleDragUpdate}
+          measureSignal={measureSignal}
         />
 
         <View style={styles.divider} />
@@ -288,6 +369,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragUpdate={handleDragUpdate}
+          measureSignal={measureSignal}
         />
       </View>
 
