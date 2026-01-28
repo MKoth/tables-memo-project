@@ -211,6 +211,15 @@ The app navigation has been completely reorganized for better scalability and us
 - **react-native-worklets**: Modern threading utilities for cross-thread communication
 - **@expo/vector-icons@14.0.2**: Ionicons for scroll handle arrows
 
+### **Migration: Reanimated worklets**
+
+- Migrated `ScrollableTable` and `ScrollHandles` to use `react-native-reanimated` worklets and animated refs (`useAnimatedRef`, `useSharedValue`).
+- Replaced JS-thread scroll synchronization with UI-thread worklets using `scrollTo`, shared values and animated scroll handlers for smoother, 60fps scroll sync.
+- Use `scheduleOnRN` / `scheduleOnUI` (from `react-native-worklets`) to coordinate cross-thread updates safely instead of `runOnJS`.
+- Improved auto-scroll behavior: adaptive scroll-step ramping, larger edge thresholds for reliable hover-triggering, and a `previousAnimationIsHappening` guard to avoid feedback loops.
+- Updated measurement and hit-testing to use screen coordinates (`measureInWindow`) and safe-area insets for correct edge-zone calculations.
+- Verify migration on physical iOS/Android devices and add tests for scroll synchronization, hover/drop edge cases, and performance regressions.
+
 ### **Scroll Handles (Arrows) System**
 - **Dynamic Scroll Handles**: Directional arrows (← → ↑ ↓) appear during drag operations
 - **Smart Visibility**: Handles only show when scrolling is possible in each direction
