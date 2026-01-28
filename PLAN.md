@@ -84,7 +84,7 @@ The app navigation has been completely reorganized for better scalability and us
 
 ### **Current Implementation Status**
 - ✅ **Table Exercises**: Fill Cells, Word Transformations (fully implemented)
-- ✅ **Word Exercises**: Multiple Choice Translation, Typing Translation (fully implemented), Matching (placeholders)
+  - ✅ **Word Exercises**: Multiple Choice Translation, Typing Translation (fully implemented), Matching (in progress — drag/hover/layout improvements applied)
 - ✅ **Navigation Flow**: Complete and tested
 - ✅ **Component Structure**: Properly organized by domain
 
@@ -127,7 +127,7 @@ The app navigation has been completely reorganized for better scalability and us
 - Multi-select words/categories or spaced repetition queue
 - Multiple choice translations ✅ **IMPLEMENTED**
 - Typing/audio input exercises ✅ **IMPLEMENTED**
-- Matching columns
+- Matching columns — in progress: hover detection, per-item layout registration, and improved drag overlay positioning computed from the dragged item's start layout plus gesture translation. Drop/hover logic and re-measure flows have been implemented; a small overlay-offset tidy-up remains.
 - Progressive hints (sentences, associations)
 
 ### Custom Tables
@@ -196,6 +196,14 @@ The app navigation has been completely reorganized for better scalability and us
 - **Real-time Hover Detection**: Table cells highlight when drag position hovers over them
 - **Smart Drop Validation**: Only allows dropping on empty cells with correct answers
 - **Visual Feedback**: Dragged variants show scaling animation and opacity changes
+
+### Matching Columns (recent updates)
+
+- Passed `translationX`/`translationY` from the gesture to JS and store the dragged item's measured `measureInWindow` start layout on drag start.
+- Compute `dragPosition = { x: start.x + translationX, y: start.y + translationY }` in the screen, use that for the global `DragOverlay` and hit-testing against opposite-column layouts.
+- Implemented per-item refs and re-measure on scroll and after matched items fade out (via an existing `measureSignal` trigger) to avoid stale hit-testing data when `FlatList` virtualizes items.
+- Cleanup of stored start-layouts on drag end.
+- Remaining: finalize removing a hard-coded visual offset in `DragOverlay` so the overlay uses the computed `dragPosition` directly.
 
 ### **Libraries Used**
 - **react-native-gesture-handler@2.30.0**: Advanced gesture recognition for smooth drag interactions

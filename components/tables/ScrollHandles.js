@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ScrollHandle = ({ direction, onPress, visible }) => {
   const getIconName = () => {
@@ -41,6 +42,8 @@ const ScrollHandle = ({ direction, onPress, visible }) => {
   );
 };
 
+const START_SCROLL_STEP = 30;
+
 const ScrollHandles = ({
   canScrollLeft,
   canScrollRight,
@@ -53,43 +56,48 @@ const ScrollHandles = ({
   showHandles,
   dragPosition,
   mainTableBodyLayout,
+  previousAnimationIsHappening,
 }) => {
-  // Auto-scroll when hovering over handles
-  React.useEffect(() => {
-    if (!dragPosition || !mainTableBodyLayout) return;
+  
+  const insets = useSafeAreaInsets();
+  const scrollStepRef = React.useRef(START_SCROLL_STEP);
+  const currentDirection = React.useRef(null);
 
+  if (dragPosition && mainTableBodyLayout && !previousAnimationIsHappening.value) {
     const { x, y } = dragPosition;
-    
-    // Define edge zones
-    const edgeThreshold = 30; // Larger threshold for easier triggering
+    const edgeThreshold = 60;
 
-    const tableBodyLeft = mainTableBodyLayout.x;
-    const tableBodyTop = mainTableBodyLayout.y;
-    const tableBodyRight = tableBodyLeft + mainTableBodyLayout.width;
-    const tableBodyBottom = tableBodyTop + mainTableBodyLayout.height;
+    const left = mainTableBodyLayout.x;
+    const top = mainTableBodyLayout.y + insets.top;
+    const right = left + mainTableBodyLayout.width;
+    const bottom = top + mainTableBodyLayout.height;
 
+    const nearLeft = x >= left && x <= left + edgeThreshold && y >= top && y <= bottom && canScrollLeft;
+    const nearRight = x >= right - edgeThreshold && x <= right && y >= top && y <= bottom && canScrollRight;
+    const nearTop = y >= top && y <= top + edgeThreshold && canScrollUp;
+    const nearBottom = y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
 
-    const nearLeft = x >= tableBodyLeft && x <= tableBodyLeft + edgeThreshold &&
-                     y >= tableBodyTop && y <= tableBodyBottom &&
-                     canScrollLeft;
-    const nearRight = x >= (tableBodyRight - edgeThreshold) && x <= tableBodyRight &&
-                      y >= tableBodyTop && y <= tableBodyBottom &&
-                      canScrollRight;
-    const nearTop = y >= tableBodyTop && y <= tableBodyTop + edgeThreshold && canScrollUp;
-    const nearBottom = y >= (tableBodyBottom - edgeThreshold) && y <= tableBodyBottom && canScrollDown;
-    
-    // Trigger scroll based on edge proximity
-    if (nearLeft) {
-      onScrollLeft();
-    } else if (nearRight) {
-      onScrollRight();
-    } else if (nearTop) {
-      onScrollUp();
-    } else if (nearBottom) {
-      onScrollDown();
+    const direction =
+      nearLeft ? 'left' :
+      nearRight ? 'right' :
+      nearTop ? 'up' :
+      nearBottom ? 'down' :
+      null;
+    if (direction === 'left') onScrollLeft(scrollStepRef.current);
+    if (direction === 'right') onScrollRight(scrollStepRef.current);
+    if (direction === 'up') onScrollUp(scrollStepRef.current);
+    if (direction === 'down') onScrollDown(scrollStepRef.current);
+    if (currentDirection.current !== direction) {
+      scrollStepRef.current = START_SCROLL_STEP; // Reset scroll step on direction change
+    } else if (direction) {
+      // Increase scroll step for faster scrolling
+      scrollStepRef.current = Math.min(scrollStepRef.current + START_SCROLL_STEP, 300);
     }
+    currentDirection.current = direction;
+  }
+          
+  // }, [canScrollLeft, canScrollRight, canScrollUp, canScrollDown, onScrollLeft, onScrollRight, onScrollUp, onScrollDown, dragPosition, mainTableBodyLayout]);
 
-  }, [dragPosition, canScrollLeft, canScrollRight, canScrollUp, canScrollDown, onScrollLeft, onScrollRight, onScrollUp, onScrollDown]);
 
   if (!showHandles) return null;
 
@@ -98,22 +106,22 @@ const ScrollHandles = ({
       <ScrollHandle
         direction="left"
         visible={canScrollLeft}
-        onPress={onScrollLeft}
+        onPress={() => onScrollLeft()}
       />
       <ScrollHandle
         direction="right"
         visible={canScrollRight}
-        onPress={onScrollRight}
+        onPress={() => onScrollRight()}
       />
       <ScrollHandle
         direction="up"
         visible={canScrollUp}
-        onPress={onScrollUp}
+        onPress={() => onScrollUp()}
       />
       <ScrollHandle
         direction="down"
         visible={canScrollDown}
-        onPress={onScrollDown}
+        onPress={() => onScrollDown()}
       />
     </View>
   );

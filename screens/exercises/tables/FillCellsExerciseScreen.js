@@ -346,7 +346,7 @@ const TableExerciseScreen = ({ navigation }) => {
       )}
 
       {/* Feedback Message - absolutely positioned to overlay table */}
-      {(feedbackMessage || draggedVariant) && (
+      {(feedbackMessage) && (
         <View style={[
           styles.feedbackContainer,
           draggedVariant ? styles.dragFeedback : (
@@ -359,7 +359,7 @@ const TableExerciseScreen = ({ navigation }) => {
             styles.feedbackText,
             draggedVariant && styles.dragFeedbackText,
           ]}>
-            {draggedVariant ? `Dragging: ${draggedVariant}` : feedbackMessage.text}
+            {feedbackMessage.text}
           </Text>
         </View>
       )}
