@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFrameCallback } from 'react-native-reanimated';
 
 const ScrollHandle = ({ direction, onPress, visible }) => {
   const getIconName = () => {
@@ -42,7 +43,19 @@ const ScrollHandle = ({ direction, onPress, visible }) => {
   );
 };
 
-const START_SCROLL_STEP = 30;
+const START_MIN_SCROLL_STEP = 0.1;
+const START_MAX_SCROLL_STEP = 5;
+
+const calculateSpeed = (distance, threshold) => {
+    'worklet';
+    // proximity: 0 at threshold edge, 1 exactly at the boundary (closest to edge)
+    const clamped = Math.max(0, Math.min(1, distance / threshold));
+    const proximity = 1 - clamped;
+    // ease-in using normalized exponential curve for a very smooth slow start and strong acceleration
+    const k = 0.01; // steepness
+    const eased = (1 - Math.exp(-k * proximity)) / (1 - Math.exp(-k));
+    return START_MIN_SCROLL_STEP + (START_MAX_SCROLL_STEP - START_MIN_SCROLL_STEP) * eased;
+};
 
 const ScrollHandles = ({
   canScrollLeft,
@@ -53,17 +66,20 @@ const ScrollHandles = ({
   onScrollRight,
   onScrollUp,
   onScrollDown,
+  uiScrollLeft,
+  uiScrollRight,
+  uiScrollUp,
+  uiScrollDown,
   showHandles,
   dragPosition,
   mainTableBodyLayout,
-  previousAnimationIsHappening,
 }) => {
   
   const insets = useSafeAreaInsets();
-  const scrollStepRef = React.useRef(START_SCROLL_STEP);
-  const currentDirection = React.useRef(null);
+  const frameCallbackRef = useRef(null);
 
-  if (dragPosition && mainTableBodyLayout && !previousAnimationIsHappening.value) {
+  const calculateDirection = () => {
+    if (!dragPosition || !mainTableBodyLayout) return null;
     const { x, y } = dragPosition;
     const edgeThreshold = 60;
 
@@ -77,27 +93,77 @@ const ScrollHandles = ({
     const nearTop = y >= top && y <= top + edgeThreshold && canScrollUp;
     const nearBottom = y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
 
-    const direction =
-      nearLeft ? 'left' :
-      nearRight ? 'right' :
-      nearTop ? 'up' :
-      nearBottom ? 'down' :
-      null;
-    if (direction === 'left') onScrollLeft(scrollStepRef.current);
-    if (direction === 'right') onScrollRight(scrollStepRef.current);
-    if (direction === 'up') onScrollUp(scrollStepRef.current);
-    if (direction === 'down') onScrollDown(scrollStepRef.current);
-    if (currentDirection.current !== direction) {
-      scrollStepRef.current = START_SCROLL_STEP; // Reset scroll step on direction change
-    } else if (direction) {
-      // Increase scroll step for faster scrolling
-      scrollStepRef.current = Math.min(scrollStepRef.current + START_SCROLL_STEP, 300);
-    }
-    currentDirection.current = direction;
-  }
-          
-  // }, [canScrollLeft, canScrollRight, canScrollUp, canScrollDown, onScrollLeft, onScrollRight, onScrollUp, onScrollDown, dragPosition, mainTableBodyLayout]);
+    return nearLeft ? 'left' :
+           nearRight ? 'right' :
+           nearTop ? 'up' :
+           nearBottom ? 'down' :
+           null;
+  };
 
+  // Frame callback (runs on UI thread) — compute direction & speed and call UI worklets directly
+  const frameCb = useFrameCallback((/* frameInfo */) => {
+    'worklet';
+    if (!dragPosition || !mainTableBodyLayout) return;
+
+    const x = dragPosition.x;
+    const y = dragPosition.y;
+    const edgeThreshold = 60;
+
+    const left = mainTableBodyLayout.x;
+    const top = mainTableBodyLayout.y + insets.top;
+    const right = left + mainTableBodyLayout.width;
+    const bottom = top + mainTableBodyLayout.height;
+
+    const nearLeft = x >= left && x <= left + edgeThreshold && y >= top && y <= bottom && canScrollLeft;
+    const nearRight = x >= right - edgeThreshold && x <= right && y >= top && y <= bottom && canScrollRight;
+    const nearTop = y >= top && y <= top + edgeThreshold && canScrollUp;
+    const nearBottom = y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
+
+    if (nearLeft) {
+      const distance = x - left;
+      const speed = calculateSpeed(distance, edgeThreshold);
+      if (uiScrollLeft) uiScrollLeft(speed, false);
+      return;
+    }
+
+    if (nearRight) {
+      const distance = right - x;
+      const speed = calculateSpeed(distance, edgeThreshold);
+      if (uiScrollRight) uiScrollRight(speed, false);
+      return;
+    }
+
+    if (nearTop) {
+      const distance = y - top;
+      const speed = calculateSpeed(distance, edgeThreshold);
+      if (uiScrollUp) uiScrollUp(speed, false);
+      return;
+    }
+
+    if (nearBottom) {
+      const distance = bottom - y;
+      const speed = calculateSpeed(distance, edgeThreshold);
+      if (uiScrollDown) uiScrollDown(speed, false);
+      return;
+    }
+  }, false);
+
+  // keep reference to frame callback controller so we can start/stop it
+  frameCallbackRef.current = frameCb;
+
+  useEffect(() => {
+    const direction = calculateDirection();
+    const active = !!direction;
+    if (frameCallbackRef.current && typeof frameCallbackRef.current.setActive === 'function') {
+      frameCallbackRef.current.setActive(active);
+    }
+
+    return () => {
+      if (frameCallbackRef.current && typeof frameCallbackRef.current.setActive === 'function') {
+        frameCallbackRef.current.setActive(false);
+      }
+    };
+  }, [dragPosition, mainTableBodyLayout, canScrollLeft, canScrollRight, canScrollUp, canScrollDown, onScrollLeft, onScrollRight, onScrollUp, onScrollDown, insets]);
 
   if (!showHandles) return null;
 
