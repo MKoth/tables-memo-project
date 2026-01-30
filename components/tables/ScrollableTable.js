@@ -107,52 +107,52 @@ const ScrollableTable = forwardRef(({
   });
 
   // Scroll handle functions - regular functions that use worklet internally should run on UI thread
-  const uiScrollLeft = (scrollStep) => {
+  const uiScrollLeft = (scrollStep, animated) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.max(0, scrollX.value - scrollStep);
-    scrollTo(headerScrollRef, newOffset, 0, true);
-    scrollTo(bodyHorizontalScrollRef, newOffset, 0, true);
+    scrollTo(headerScrollRef, newOffset, 0, animated);
+    scrollTo(bodyHorizontalScrollRef, newOffset, 0, animated);
   };
 
-  const uiScrollRight = (scrollStep) => {
+  const uiScrollRight = (scrollStep, animated) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.min(maxHorizontalOffset.value, scrollX.value + scrollStep);
-    scrollTo(headerScrollRef, newOffset, 0, true);
-    scrollTo(bodyHorizontalScrollRef, newOffset, 0, true);
+    scrollTo(headerScrollRef, newOffset, 0, animated);
+    scrollTo(bodyHorizontalScrollRef, newOffset, 0, animated);
   };
 
-  const uiScrollUp = (scrollStep) => {
+  const uiScrollUp = (scrollStep, animated) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.max(0, scrollY.value - scrollStep);
-    scrollTo(columnScrollRef, 0, newOffset, true);
-    scrollTo(bodyVerticalScrollRef, 0, newOffset, true);
+    scrollTo(columnScrollRef, 0, newOffset, animated);
+    scrollTo(bodyVerticalScrollRef, 0, newOffset, animated);
   };
 
-  const uiScrollDown = (scrollStep) => {
+  const uiScrollDown = (scrollStep, animated) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.min(maxVerticalOffset.value, scrollY.value + scrollStep);
-    scrollTo(columnScrollRef, 0, newOffset, true);
-    scrollTo(bodyVerticalScrollRef, 0, newOffset, true);
+    scrollTo(columnScrollRef, 0, newOffset, animated);
+    scrollTo(bodyVerticalScrollRef, 0, newOffset, animated);
   };
 
-  const scrollLeft = (scrollStep = SCROLL_STEP) => {
-    scheduleOnUI(uiScrollLeft, scrollStep);
+  const scrollLeft = (scrollStep = SCROLL_STEP, animated = true) => {
+    scheduleOnUI(uiScrollLeft, scrollStep, animated);
   };
 
-  const scrollRight = (scrollStep = SCROLL_STEP) => {
-    scheduleOnUI(uiScrollRight, scrollStep);
+  const scrollRight = (scrollStep = SCROLL_STEP, animated = true) => {
+    scheduleOnUI(uiScrollRight, scrollStep, animated);
   };
 
-  const scrollUp = (scrollStep = SCROLL_STEP) => {
-    scheduleOnUI(uiScrollUp, scrollStep);
+  const scrollUp = (scrollStep = SCROLL_STEP, animated = true) => {
+    scheduleOnUI(uiScrollUp, scrollStep, animated);
   };
 
-  const scrollDown = (scrollStep = SCROLL_STEP) => {
-    scheduleOnUI(uiScrollDown, scrollStep);
+  const scrollDown = (scrollStep = SCROLL_STEP, animated = true) => {
+    scheduleOnUI(uiScrollDown, scrollStep, animated);
   };
 
   // Expose scrollToCell method via ref
@@ -283,6 +283,8 @@ const ScrollableTable = forwardRef(({
 
           maxHorizontalOffset.value = maxHoriz;
           maxVerticalOffset.value = maxVert;
+          // Notify JS thread about initial scrollability state so handles show correctly
+          updateScrollability(scrollX.value, scrollY.value, maxHorizontalOffset.value, maxVerticalOffset.value);
         }}
       >
         <Animated.ScrollView
@@ -343,10 +345,14 @@ const ScrollableTable = forwardRef(({
           onScrollRight={scrollRight}
           onScrollUp={scrollUp}
           onScrollDown={scrollDown}
+          // ui scroll worklets for direct calls from useFrameCallback of ScrollHandles
+          uiScrollLeft={uiScrollLeft}
+          uiScrollRight={uiScrollRight}
+          uiScrollUp={uiScrollUp}
+          uiScrollDown={uiScrollDown}
           showHandles={true} // Always show
           dragPosition={dragPosition}
           mainTableBodyLayout={mainTableBodyScreenLayout}
-          previousAnimationIsHappening={previousAnimationIsHappening}
         />
       </View>
     </View>
