@@ -10,49 +10,48 @@ import {
 } from 'react-native';
 import ScrollableTable from '../../../components/tables/ScrollableTable';
 import VariantsList from '../../../components/tables/VariantsList';
-import { sampleSpanishTable, createFillCellsExercise } from '../../../utils/types';
-import { useSharedValue } from 'react-native-reanimated';
+import { sampleSpanishTable, createFillCellsExercise, type FillCellsExercise } from '../../../utils/domain';
 import DragOverlay from '../../../components/tables/DragOverlay';
+import type { RootStackScreenProps } from '../../../navigation/types';
+import type { FeedbackMessage, LayoutRect } from '../../../types/ui';
 
-const TableExerciseScreen = ({ navigation }) => {
-  const [exerciseState, setExerciseState] = useState(() =>
+type Props = RootStackScreenProps<'FillCellsExercise'>;
+
+const FillCellsExerciseScreen = ({ navigation }: Props) => {
+  const [exerciseState, setExerciseState] = useState<FillCellsExercise>(() =>
     createFillCellsExercise(sampleSpanishTable)
   );
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [wrongCell, setWrongCell] = useState(null);
-  const [animatingVariant, setAnimatingVariant] = useState(null);
-  const [selectedVariantRef, setSelectedVariantRef] = useState(null);
-  const [draggedVariant, setDraggedVariant] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null);
+  const [wrongCell, setWrongCell] = useState<{ row: number; col: number } | null>(null);
+  const [animatingVariant, setAnimatingVariant] = useState<string | null>(null);
+  const [selectedVariantRef, setSelectedVariantRef] = useState<React.RefObject<View | null> | null>(null);
+  const [draggedVariant, setDraggedVariant] = useState<string | null>(null);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
-  const [hoveredCell, setHoveredCell] = useState(null);
-  const feedbackTimeoutRef = useRef(null);
+  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flyingVariantPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const flyingVariantWidth = useRef(new Animated.Value(80)).current; // Default width
-  const cellLayouts = useRef(new Map()).current; // Store cell positions for hit testing
+  const flyingVariantWidth = useRef(new Animated.Value(80)).current;
+  const cellLayouts = useRef(new Map<string, LayoutRect>()).current;
 
-  const showFeedbackMessage = (message) => {
-    // Clear any existing timeout
+  const showFeedbackMessage = (message: FeedbackMessage) => {
     if (feedbackTimeoutRef.current) {
       clearTimeout(feedbackTimeoutRef.current);
     }
 
-    // Set new message
     setFeedbackMessage(message);
 
-    // Set new timeout
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedbackMessage(null);
       feedbackTimeoutRef.current = null;
     }, 2000);
   };
 
-  const handleVariantSelect = (variant, variantRef) => {
+  const handleVariantSelect = (variant: string, variantRef: React.RefObject<View | null>) => {
     setExerciseState(prev => ({
       ...prev,
       selectedVariant: prev.selectedVariant === variant ? null : variant,
     }));
 
-    // Capture the ref of the selected variant for animation
     if (variant && variantRef) {
       setSelectedVariantRef(variantRef);
     } else {
@@ -60,7 +59,7 @@ const TableExerciseScreen = ({ navigation }) => {
     }
   };
 
-  const getGlobalPosition = (ref) => {
+  const getGlobalPosition = (ref: React.RefObject<View | null> | null): Promise<LayoutRect | null> => {
     return new Promise((resolve) => {
       if (ref?.current) {
         ref.current.measureInWindow((x, y, width, height) => {
@@ -72,8 +71,10 @@ const TableExerciseScreen = ({ navigation }) => {
     });
   };
 
-  const animateVariantToCell = async (variantRef, cellRef) => {
-    // Get positions at the moment of animation
+  const animateVariantToCell = async (
+    variantRef: React.RefObject<View | null> | null,
+    cellRef: React.RefObject<View | null>
+  ): Promise<void> => {
     const startPos = await getGlobalPosition(variantRef);
     const endPos = await getGlobalPosition(cellRef);
 
@@ -84,7 +85,6 @@ const TableExerciseScreen = ({ navigation }) => {
 
     const headerHeight = 64;
 
-    // Set initial position and width
     flyingVariantPosition.setValue({ x: startPos.x, y: startPos.y - headerHeight });
     flyingVariantWidth.setValue(startPos.width);
 
@@ -100,7 +100,7 @@ const TableExerciseScreen = ({ navigation }) => {
           toValue: endPos.width,
           duration: 400,
           easing: Easing.out(Easing.cubic),
-          useNativeDriver: false, // Width animation needs native driver false
+          useNativeDriver: false,
         }),
       ]).start(() => {
         resolve();
@@ -108,9 +108,7 @@ const TableExerciseScreen = ({ navigation }) => {
     });
   };
 
-
-
-  const handleCellPress = async (row, col, cellRef) => {
+  const handleCellPress = async (row: number, col: number, cellRef: React.RefObject<View | null>) => {
     if (!exerciseState.selectedVariant) {
       Alert.alert('Select a variant first', 'Please select a variant from the list below before placing it in a cell.');
       return;
@@ -120,14 +118,11 @@ const TableExerciseScreen = ({ navigation }) => {
     const isCorrect = targetCell.correctValue === exerciseState.selectedVariant;
 
     if (isCorrect) {
-      // Start animation with the selected variant
       setAnimatingVariant(exerciseState.selectedVariant);
 
       try {
-        // Phase 1: Animate variant flying from selected variant to cell
         await animateVariantToCell(selectedVariantRef, cellRef);
 
-        // Phase 2: Fill cell and remove variant
         setExerciseState(prev => {
           const newCells = prev.table.cells.map((cellRow, rowIndex) =>
             cellRow.map((cell, colIndex) => {
@@ -143,10 +138,8 @@ const TableExerciseScreen = ({ navigation }) => {
             })
           );
 
-          // Remove used variant from variants list
           const newVariants = prev.variants.filter(v => v !== prev.selectedVariant);
 
-          // Check if exercise is completed
           const isCompleted = newCells.flat().every(cell => cell.isFilled);
 
           return {
@@ -161,10 +154,8 @@ const TableExerciseScreen = ({ navigation }) => {
           };
         });
 
-        // Show success feedback
         showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
 
-        // Check completion
         const isCompleted = exerciseState.table.cells.flat().every(cell =>
           cell.isFilled || (row === cell.row && col === cell.col)
         );
@@ -174,25 +165,20 @@ const TableExerciseScreen = ({ navigation }) => {
         }
 
       } finally {
-        // Clean up animation state
         setAnimatingVariant(null);
         setSelectedVariantRef(null);
-        flyingVariantWidth.setValue(80); // Reset to default width
+        flyingVariantWidth.setValue(80);
       }
 
     } else {
-      // Wrong choice - show red cell temporarily
       setWrongCell({ row, col });
       showFeedbackMessage({ type: 'error', text: "Wrong choice!!! Don't worry, just try again!" });
 
-      // Clear wrong cell after 2 seconds (separate from message timeout)
       setTimeout(() => {
         setWrongCell(null);
       }, 2000);
     }
   };
-
-
 
   const handleReset = () => {
     Alert.alert(
@@ -211,28 +197,26 @@ const TableExerciseScreen = ({ navigation }) => {
     );
   };
 
-  const getUsedVariants = () => {
+  const getUsedVariants = (): string[] => {
     return exerciseState.table.cells
       .flat()
       .filter(cell => cell.isFilled)
-      .map(cell => cell.currentValue);
+      .map(cell => cell.currentValue)
+      .filter((value): value is string => value != null);
   };
 
-  // Drag and drop handlers
-  const handleVariantDragStart = (variant) => {
+  const handleVariantDragStart = (variant: string) => {
     setDraggedVariant(variant);
-    // Select the dragged variant and deselect any previously selected variant
     setExerciseState(prev => ({
       ...prev,
       selectedVariant: variant,
     }));
   };
 
-  const handleVariantDragUpdate = (x, y, variant) => {
+  const handleVariantDragUpdate = (x: number, y: number, _variant: string) => {
     setDragPosition({ x, y });
 
-    // Hit test against cells
-    let foundHoveredCell = null;
+    let foundHoveredCell: { row: number; col: number } | null = null;
     for (const [cellKey, layout] of cellLayouts.entries()) {
       if (
         x >= layout.x &&
@@ -248,24 +232,21 @@ const TableExerciseScreen = ({ navigation }) => {
     setHoveredCell(foundHoveredCell);
   };
 
-  const handleVariantDragEnd = async (variant) => {
+  const handleVariantDragEnd = async (variant: string) => {
     if (hoveredCell && !exerciseState.table.cells[hoveredCell.row][hoveredCell.col].isFilled) {
-      // Drop on cell
       await handleCellDrop(hoveredCell.row, hoveredCell.col, variant);
     }
 
-    // Clean up drag state
     setDraggedVariant(null);
     setDragPosition({ x: 0, y: 0 });
     setHoveredCell(null);
   };
 
-  const handleCellDrop = async (row, col, variant) => {
+  const handleCellDrop = async (row: number, col: number, variant: string) => {
     const targetCell = exerciseState.table.cells[row][col];
     const isCorrect = targetCell.correctValue === variant;
 
     if (isCorrect) {
-      // Fill cell and remove variant
       setExerciseState(prev => {
         const newCells = prev.table.cells.map((cellRow, rowIndex) =>
           cellRow.map((cell, colIndex) => {
@@ -281,10 +262,8 @@ const TableExerciseScreen = ({ navigation }) => {
           })
         );
 
-        // Remove used variant from variants list
         const newVariants = prev.variants.filter(v => v !== variant);
 
-        // Check if exercise is completed
         const isCompleted = newCells.flat().every(cell => cell.isFilled);
 
         return {
@@ -299,42 +278,37 @@ const TableExerciseScreen = ({ navigation }) => {
         };
       });
 
-      // Show success feedback
       showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
 
-      // Check completion
       if (exerciseState.table.cells.flat().every(cell => cell.isFilled)) {
         showFeedbackMessage({ type: 'completion', text: 'Well done!!! You completed all cells!' });
       }
     } else {
-      // Wrong choice - show red cell temporarily
       setWrongCell({ row, col });
       showFeedbackMessage({ type: 'error', text: "Wrong choice!!! Don't worry, just try again!" });
 
-      // Clear wrong cell after 2 seconds
       setTimeout(() => {
         setWrongCell(null);
       }, 2000);
     }
   };
 
-  const registerCellLayout = (row, col, layout) => {
+  const registerCellLayout = (row: number, col: number, layout: LayoutRect) => {
     cellLayouts.set(`${row}-${col}`, layout);
   };
 
-  const getCellIsHovered = (row, col) => {
-    return hoveredCell && hoveredCell.row === row && hoveredCell.col === col;
+  const getCellIsHovered = (row: number, col: number): boolean => {
+    return !!(hoveredCell && hoveredCell.row === row && hoveredCell.col === col);
   };
 
   return (
     <View style={styles.container}>
-      {/* Flying Variant Animation Overlay */}
       {animatingVariant && selectedVariantRef && (
         <Animated.View
           style={[
             styles.flyingVariant,
             {
-              left: 0, // Will be positioned by transform
+              left: 0,
               top: 0,
               width: flyingVariantWidth,
               transform: flyingVariantPosition.getTranslateTransform(),
@@ -345,7 +319,6 @@ const TableExerciseScreen = ({ navigation }) => {
         </Animated.View>
       )}
 
-      {/* Feedback Message - absolutely positioned to overlay table */}
       {(feedbackMessage) && (
         <View style={[
           styles.feedbackContainer,
@@ -364,7 +337,6 @@ const TableExerciseScreen = ({ navigation }) => {
         </View>
       )}
 
-      {/* Table - takes remaining space in content area */}
       <View style={styles.tableContainer}>
         <ScrollableTable
           table={exerciseState.table}
@@ -378,7 +350,6 @@ const TableExerciseScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Variants List - constrained height within content area */}
       {!exerciseState.isCompleted && (
         <View style={styles.variantsContainer}>
           <VariantsList
@@ -394,14 +365,12 @@ const TableExerciseScreen = ({ navigation }) => {
         </View>
       )}
 
-      {/* Drag Overlay - renders dragged variant at global level */}
       <DragOverlay
         draggedVariant={draggedVariant}
-        dragPosition={{ x: dragPosition.x - 35, y: dragPosition.y - 18 }} // Center the variant (assuming 80x40 size)
+        dragPosition={{ x: dragPosition.x - 35, y: dragPosition.y - 18 }}
         isDragging={!!draggedVariant}
       />
 
-      {/* Action Buttons - absolutely positioned at bottom */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, styles.secondaryButton]}
@@ -411,8 +380,6 @@ const TableExerciseScreen = ({ navigation }) => {
             Reset
           </Text>
         </TouchableOpacity>
-
-
 
         <TouchableOpacity
           style={[styles.button, styles.secondaryButton]}
@@ -523,7 +490,7 @@ const styles = StyleSheet.create({
   },
   feedbackContainer: {
     position: 'absolute',
-    top: 10, // Position near table header area
+    top: 10,
     left: 16,
     right: 16,
     padding: 16,
@@ -541,16 +508,16 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   errorFeedback: {
-    backgroundColor: '#ffebee', // Rosy background for errors
+    backgroundColor: '#ffebee',
   },
   successFeedback: {
-    backgroundColor: '#e8f5e8', // Greenish background for success
+    backgroundColor: '#e8f5e8',
   },
   completionFeedback: {
-    backgroundColor: '#e8f5e8', // Greenish background for completion
+    backgroundColor: '#e8f5e8',
   },
   dragFeedback: {
-    backgroundColor: '#e6e6fa', // Light purple background for drag feedback
+    backgroundColor: '#e6e6fa',
   },
   feedbackText: {
     fontSize: 18,
@@ -560,13 +527,13 @@ const styles = StyleSheet.create({
     fontFamily: 'ComicSansMS',
   },
   dragFeedbackText: {
-    color: '#a089d1', // Purple text to match selected variants
+    color: '#a089d1',
   },
   flyingVariant: {
     position: 'absolute',
     paddingHorizontal: 6,
     paddingVertical: 6,
-    backgroundColor: '#a089d1', // Match selected variant purple
+    backgroundColor: '#a089d1',
     borderRadius: 6,
     shadowColor: '#000',
     shadowOffset: {
@@ -584,10 +551,10 @@ const styles = StyleSheet.create({
   flyingVariantText: {
     fontSize: 14,
     textAlign: 'center',
-    color: '#333', // Dark text to match successful cell text
+    color: '#333',
     fontWeight: 'normal',
     fontFamily: 'ComicSansMS',
   },
 });
 
-export default TableExerciseScreen;
+export default FillCellsExerciseScreen;

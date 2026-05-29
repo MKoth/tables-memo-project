@@ -2,7 +2,34 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
-const AnimatedLetter = ({ letter, index, selected, disabled, onPress, animationOrderIndex = 0, totalLetters = 1, mode = 'idle', position = { left: 0, top: 0 } }) => {
+interface LetterPosition {
+  left: number;
+  top: number;
+}
+
+interface AnimatedLetterProps {
+  letter: string;
+  index: number;
+  selected: boolean;
+  disabled: boolean;
+  onPress: (letter: string, index: number) => void;
+  animationOrderIndex?: number;
+  totalLetters?: number;
+  mode?: 'idle' | 'entering';
+  position?: LetterPosition;
+}
+
+const AnimatedLetter = ({
+  letter,
+  index,
+  selected,
+  disabled,
+  onPress,
+  animationOrderIndex = 0,
+  totalLetters = 1,
+  mode = 'idle',
+  position = { left: 0, top: 0 },
+}: AnimatedLetterProps) => {
   const getEnteringAnimation = () => {
     return FadeIn.delay(animationOrderIndex * 100).springify();
   };
@@ -10,7 +37,7 @@ const AnimatedLetter = ({ letter, index, selected, disabled, onPress, animationO
   const getExitingAnimation = () => {
     const reverseIndex = (totalLetters - 1) - animationOrderIndex;
     return FadeOut.delay(reverseIndex * 100).springify();
-  }
+  };
 
   return (
     <Animated.View
@@ -23,14 +50,14 @@ const AnimatedLetter = ({ letter, index, selected, disabled, onPress, animationO
         style={[
           styles.letterButton,
           selected && styles.selectedLetter,
-          disabled && styles.disabledLetter
+          disabled && styles.disabledLetter,
         ]}
         onPress={() => onPress(letter, index)}
         disabled={disabled}
       >
         <Text style={[
           styles.letterText,
-          selected && styles.selectedLetterText
+          selected && styles.selectedLetterText,
         ]}>
           {letter}
         </Text>

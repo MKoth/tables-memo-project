@@ -6,9 +6,12 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
+import type { Language, RootStackScreenProps } from '../../navigation/types';
 
-const LanguageSelectionScreen = ({ navigation }) => {
-  const languages = [
+type Props = RootStackScreenProps<'LanguageSelection'>;
+
+const LanguageSelectionScreen = ({ navigation }: Props) => {
+  const languages: Language[] = [
     { id: 'english', name: 'English', flag: '🇺🇸' },
     { id: 'spanish', name: 'Spanish', flag: '🇪🇸' },
     { id: 'french', name: 'French', flag: '🇫🇷' },
@@ -17,14 +20,11 @@ const LanguageSelectionScreen = ({ navigation }) => {
     { id: 'portuguese', name: 'Portuguese', flag: '🇵🇹' },
   ];
 
-  const handleLanguageSelect = (language) => {
-    // TODO: Store selected language in context
-    // Navigate to learning type selection with selected language
+  const handleLanguageSelect = (language: Language) => {
     navigation.navigate('LearningTypeSelection', { selectedLanguage: language });
   };
 
   const handlePersonalProject = () => {
-    // TODO: Navigate to AI chatbot for personal project creation
     alert('Personal project creation coming soon!');
   };
 

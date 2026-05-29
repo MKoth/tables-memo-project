@@ -10,33 +10,43 @@ import {
 } from 'react-native';
 import ScrollableTable from '../../../components/tables/ScrollableTable';
 import TransformationWorkspace from '../../../components/tables/TransformationWorkspace';
-import { sampleSpanishTable, createWordTransformationExercise, OPERATION_TYPES, generateWrongVariants } from '../../../utils/types';
+import {
+  sampleSpanishTable,
+  createWordTransformationExercise,
+  OPERATION_TYPES,
+  type WordOperationSequence,
+  type WordTransformationExercise,
+} from '../../../utils/domain';
 
-const WordTransformationExerciseScreen = ({ navigation }) => {
-  const [exerciseState, setExerciseState] = useState(() =>
+type SequenceWithHint = WordOperationSequence & { showHint?: boolean };
+import type { RootStackScreenProps } from '../../../navigation/types';
+import type { FeedbackMessage, LayoutRect, ScrollableTableHandle, ScrollWorkspaceHandle } from '../../../types/ui';
+
+type Props = RootStackScreenProps<'WordTransformationExercise'>;
+
+const WordTransformationExerciseScreen = ({ navigation }: Props) => {
+  const [exerciseState, setExerciseState] = useState<WordTransformationExercise>(() =>
     createWordTransformationExercise(sampleSpanishTable)
   );
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [selectedLetters, setSelectedLetters] = useState(new Set());
+  const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null);
+  const [selectedLetters, setSelectedLetters] = useState<Set<number>>(new Set());
   const [inputText, setInputText] = useState('');
   const [showVariants, setShowVariants] = useState(false);
-  const [animatingWord, setAnimatingWord] = useState(null);
+  const [animatingWord, setAnimatingWord] = useState<string | null>(null);
   const [justCompletedTransformation, setJustCompletedTransformation] = useState(false);
-  const feedbackTimeoutRef = useRef(null);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Animation refs
   const flyingWordPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const flyingWordScale = useRef(new Animated.Value(1)).current;
-  const cellLayouts = useRef(new Map());
-  const wordDisplayRef = useRef(null);
-  const tableScrollRef = useRef(null);
-  const workspaceScrollRef = useRef(null);
+  const cellLayouts = useRef(new Map<string, LayoutRect>());
+  const wordDisplayRef = useRef<View>(null);
+  const tableScrollRef = useRef<ScrollableTableHandle>(null);
+  const workspaceScrollRef = useRef<ScrollWorkspaceHandle>(null);
 
-  // Current sequence and operation
   const currentSequence = exerciseState.sequences[exerciseState.currentSequenceIndex];
   const currentOperation = currentSequence?.operations[currentSequence.currentOperation];
 
-  const showFeedbackMessage = (message) => {
+  const showFeedbackMessage = (message: FeedbackMessage) => {
     if (feedbackTimeoutRef.current) {
       clearTimeout(feedbackTimeoutRef.current);
     }
@@ -49,7 +59,7 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
     }, 2000);
   };
 
-  const getGlobalPosition = (ref) => {
+  const getGlobalPosition = (ref: React.RefObject<View | null>): Promise<LayoutRect | null> => {
     return new Promise((resolve) => {
       if (ref?.current) {
         ref.current.measureInWindow((x, y, width, height) => {
@@ -61,7 +71,7 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
     });
   };
 
-  const animateWordToCell = async (word, cellRow, cellCol) => {
+  const animateWordToCell = async (word: string, cellRow: number, cellCol: number): Promise<void> => {
     const startPos = await getGlobalPosition(wordDisplayRef);
     const cellKey = `${cellRow}-${cellCol}`;
     const cellLayout = cellLayouts.current.get(cellKey);
@@ -73,7 +83,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
 
     const headerHeight = 64;
 
-    // Set initial position and scale
     flyingWordPosition.setValue({ x: startPos.x, y: startPos.y - headerHeight });
     flyingWordScale.setValue(1);
 
@@ -91,27 +100,22 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
     });
   };
 
-  const onTransformationComplete = async (row, col, word) => {
-    // Scroll table to show target cell
+  const onTransformationComplete = async (row: number, col: number, word: string) => {
     if (tableScrollRef.current) {
       tableScrollRef.current.scrollToCell(row, col);
     }
 
-    // Scroll workspace to top
     if (workspaceScrollRef.current) {
       workspaceScrollRef.current.scrollTo({ y: 0, animated: true });
     }
 
-    // Wait for scrolls to complete
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise<void>(resolve => setTimeout(resolve, 300));
 
-    // Start animation
     setAnimatingWord(word);
 
     try {
       await animateWordToCell(word, row, col);
 
-      // Fill the cell (sequence increment already handled by advanceOperation)
       setExerciseState(prev => {
         const newCells = prev.table.cells.map((cellRow, rowIndex) =>
           cellRow.map((cell, colIndex) => {
@@ -133,7 +137,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
         };
       });
 
-      // Signal that we just completed a transformation (will trigger scroll in useEffect)
       setJustCompletedTransformation(true);
 
       showFeedbackMessage({ type: 'success', text: 'Perfect!!!' });
@@ -145,11 +148,11 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
     }
   };
 
-  const registerCellLayout = (row, col, layout) => {
+  const registerCellLayout = (row: number, col: number, layout: LayoutRect) => {
     cellLayouts.current.set(`${row}-${col}`, layout);
   };
 
-  const handleLetterPress = (letter, index) => {
+  const handleLetterPress = (_letter: string, index: number) => {
     if (currentOperation?.type !== OPERATION_TYPES.DELETE) return;
 
     const newSelected = new Set(selectedLetters);
@@ -164,7 +167,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
   const handleSubmitRemoval = async () => {
     if (currentOperation?.type !== OPERATION_TYPES.DELETE) return;
 
-    // Convert selected indexes to the actual indexes that need to be deleted
     const selectedIndexes = Array.from(selectedLetters).sort((a, b) => a - b);
     const expectedStartIndex = currentOperation.index;
     const expectedLength = currentOperation.length;
@@ -174,7 +176,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
       selectedIndexes.every((index, i) => index === expectedIndexes[i]);
 
     if (indexesMatch) {
-      // Correct removal - remove the specified substring
       const before = currentSequence.currentWord.slice(0, currentOperation.index);
       const after = currentSequence.currentWord.slice(currentOperation.index + currentOperation.length);
       const newWord = before + after;
@@ -183,7 +184,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
       const sequenceCompleted = advanceOperation();
 
       if (sequenceCompleted) {
-        // Get the completed word before state update
         const completedWord = newWord;
         await onTransformationComplete(currentSequence.rowIndex, currentSequence.colIndex, completedWord);
       } else {
@@ -196,11 +196,10 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
     setSelectedLetters(new Set());
   };
 
-  const handleVariantSelect = async (variant) => {
+  const handleVariantSelect = async (variant: string) => {
     if (currentOperation?.type !== OPERATION_TYPES.INSERT) return;
 
     if (variant === currentOperation.text) {
-      // Correct insertion
       const before = currentSequence.currentWord.slice(0, currentOperation.index);
       const after = currentSequence.currentWord.slice(currentOperation.index);
       const newWord = before + variant + after;
@@ -209,7 +208,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
       const sequenceCompleted = advanceOperation();
 
       if (sequenceCompleted) {
-        // Get the completed word before state update
         const completedWord = newWord;
         await onTransformationComplete(currentSequence.rowIndex, currentSequence.colIndex, completedWord);
       } else {
@@ -222,7 +220,7 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
     setShowVariants(false);
   };
 
-  const updateCurrentWord = (newWord) => {
+  const updateCurrentWord = (newWord: string) => {
     setExerciseState(prev => ({
       ...prev,
       sequences: prev.sequences.map((seq, index) =>
@@ -233,8 +231,7 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
     }));
   };
 
-  const advanceOperation = () => {
-    // Check synchronously if this operation will complete the sequence
+  const advanceOperation = (): boolean => {
     const willCompleteSequence = currentSequence.currentOperation >= currentSequence.operations.length - 1;
 
     setExerciseState(prev => {
@@ -242,15 +239,12 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
       const currentSeq = newSequences[prev.currentSequenceIndex];
 
       if (currentSeq.currentOperation < currentSeq.operations.length - 1) {
-        // Next operation in current sequence
         currentSeq.currentOperation += 1;
       } else {
-        // Sequence completed, move to next cell
         currentSeq.isCompleted = true;
         const nextIndex = prev.currentSequenceIndex + 1;
 
         if (nextIndex >= prev.sequences.length) {
-          // Exercise completed
           return {
             ...prev,
             sequences: newSequences,
@@ -258,7 +252,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
             isCompleted: true
           };
         } else {
-          // Next sequence
           return {
             ...prev,
             sequences: newSequences,
@@ -296,7 +289,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
     );
   };
 
-  // Scroll to new cell when transformation completes
   useEffect(() => {
     if (justCompletedTransformation) {
       const newSequence = exerciseState.sequences[exerciseState.currentSequenceIndex];
@@ -313,8 +305,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
 
     return exerciseState.table.cells[sequence.rowIndex]?.[sequence.colIndex];
   };
-
-
 
   if (exerciseState.isCompleted) {
     return (
@@ -337,13 +327,12 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Flying Word Animation Overlay */}
       {animatingWord && (
         <Animated.View
           style={[
             styles.flyingWord,
             {
-              left: 0, // Will be positioned by transform
+              left: 0,
               top: 0,
               transform: [
                 { translateX: flyingWordPosition.x },
@@ -357,7 +346,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
         </Animated.View>
       )}
 
-      {/* Feedback Message */}
       {feedbackMessage && (
         <View style={[
           styles.feedbackContainer,
@@ -368,12 +356,11 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
         </View>
       )}
 
-      {/* Table with blinking cell */}
       <View style={styles.tableContainer}>
         <ScrollableTable
           ref={tableScrollRef}
           table={exerciseState.table}
-          onCellPress={() => {}} // Read-only for this exercise
+          onCellPress={() => {}}
           showAnswers={false}
           wrongCell={null}
           getCellIsHovered={() => false}
@@ -384,7 +371,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Transformation Workspace */}
       <TransformationWorkspace
         ref={workspaceScrollRef}
         sequence={currentSequence}
@@ -396,11 +382,12 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
         onHintToggle={() => {
           setExerciseState(prev => ({
             ...prev,
-            sequences: prev.sequences.map((seq, index) =>
-              index === prev.currentSequenceIndex
-                ? { ...seq, showHint: !seq.showHint }
-                : seq
-            )
+            sequences: prev.sequences.map((seq, index) => {
+              const seqWithHint = seq as SequenceWithHint;
+              return index === prev.currentSequenceIndex
+                ? { ...seqWithHint, showHint: !seqWithHint.showHint }
+                : seqWithHint;
+            })
           }));
         }}
         onSubmitRemoval={handleSubmitRemoval}
@@ -408,7 +395,6 @@ const WordTransformationExerciseScreen = ({ navigation }) => {
         onShowVariants={() => setShowVariants(true)}
       />
 
-      {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, styles.secondaryButton]}
@@ -550,7 +536,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#9ed69e', // Match successful cell green
+    backgroundColor: '#9ed69e',
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: {
@@ -568,8 +554,8 @@ const styles = StyleSheet.create({
   flyingWordText: {
     fontSize: 14,
     textAlign: 'center',
-    color: '#333', // White text to match successful cell
-    fontWeight: 'normal', // Bold like successful cells
+    color: '#333',
+    fontWeight: 'normal',
     fontFamily: 'ComicSansMS',
   },
 });

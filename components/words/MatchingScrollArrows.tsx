@@ -1,10 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import type { DragPosition } from '../../types/ui';
 
-const MatchingScrollArrows = ({ isDragging, dragPosition, columnBounds }) => {
+interface ColumnBounds {
+  left: number;
+  right: number;
+}
+
+interface MatchingScrollArrowsProps {
+  isDragging: boolean;
+  dragPosition: DragPosition | null;
+  columnBounds: ColumnBounds | null;
+}
+
+const MatchingScrollArrows = ({
+  isDragging,
+  dragPosition,
+  columnBounds,
+}: MatchingScrollArrowsProps) => {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
-  const SCROLL_THRESHOLD = 30; // pixels from edge to trigger arrow
+  const SCROLL_THRESHOLD = 30;
 
   useEffect(() => {
     if (!isDragging || !dragPosition || !columnBounds) {
@@ -16,10 +32,7 @@ const MatchingScrollArrows = ({ isDragging, dragPosition, columnBounds }) => {
     const { x } = dragPosition;
     const { left, right } = columnBounds;
 
-    // Show left arrow if dragging near left edge
     setShowLeftArrow(x < left + SCROLL_THRESHOLD);
-
-    // Show right arrow if dragging near right edge
     setShowRightArrow(x > right - SCROLL_THRESHOLD);
   }, [isDragging, dragPosition, columnBounds]);
 

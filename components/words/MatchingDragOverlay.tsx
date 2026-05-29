@@ -1,17 +1,31 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import type { DragPosition } from '../../types/ui';
 
-const MatchingDragOverlay = ({ draggedWord, dragPosition, isDragging }) => {
+interface MatchingDragOverlayProps {
+  draggedWord: string | null;
+  dragPosition: DragPosition;
+  isDragging: boolean;
+}
+
+const MatchingDragOverlay = ({
+  draggedWord,
+  dragPosition,
+  isDragging,
+}: MatchingDragOverlayProps) => {
   const headerHeight = 64;
-  
-  const animatedStyle = useAnimatedStyle(() => ({
-    position: 'absolute',
-    left: dragPosition.x - 40, // Center the word on the drag point
-    top: dragPosition.y - 20 - headerHeight, // Center the word + account for header height
-    zIndex: 9999,
-    opacity: isDragging ? 1 : 0,
-  }), [dragPosition, isDragging]);
+
+  const animatedStyle = useAnimatedStyle(
+    () => ({
+      position: 'absolute',
+      left: dragPosition.x - 40,
+      top: dragPosition.y - 20 - headerHeight,
+      zIndex: 9999,
+      opacity: isDragging ? 1 : 0,
+    }),
+    [dragPosition, isDragging]
+  );
 
   if (!isDragging || !draggedWord) {
     return null;
@@ -29,13 +43,13 @@ const MatchingDragOverlay = ({ draggedWord, dragPosition, isDragging }) => {
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    pointerEvents: 'none', // Don't interfere with touch events
+    pointerEvents: 'none',
   },
   word: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#a089d1', // Purple
+    backgroundColor: '#a089d1',
     minWidth: 70,
     alignItems: 'center',
     justifyContent: 'center',
@@ -47,12 +61,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
-    transform: [{ scale: 1.1 }], // Slightly larger when dragging
+    transform: [{ scale: 1.1 }],
   },
   wordText: {
     fontSize: 14,
     textAlign: 'center',
-    color: '#452563', // Dark purple text
+    color: '#452563',
     fontWeight: 'bold',
     fontFamily: 'ComicSansMS',
   },

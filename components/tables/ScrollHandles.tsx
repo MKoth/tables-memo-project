@@ -1,11 +1,22 @@
 import React, { useEffect, useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFrameCallback } from 'react-native-reanimated';
+import type { DragPosition, LayoutRect } from '../../types/ui';
 
-const ScrollHandle = ({ direction, onPress, visible }) => {
-  const getIconName = () => {
+type ScrollDirection = 'left' | 'right' | 'up' | 'down';
+
+type UiScrollWorklet = ((scrollStep: number, animated: boolean) => void) | null | undefined;
+
+interface ScrollHandleProps {
+  direction: ScrollDirection;
+  onPress: () => void;
+  visible: boolean;
+}
+
+const ScrollHandle = ({ direction, onPress, visible }: ScrollHandleProps) => {
+  const getIconName = (): keyof typeof Ionicons.glyphMap => {
     switch (direction) {
       case 'left': return 'chevron-back';
       case 'right': return 'chevron-forward';
@@ -15,7 +26,7 @@ const ScrollHandle = ({ direction, onPress, visible }) => {
     }
   };
 
-  const getPositionStyle = () => {
+  const getPositionStyle = (): ViewStyle => {
     switch (direction) {
       case 'left':
         return { left: -10, top: '50%', transform: [{ translateY: -20 }] };
@@ -46,16 +57,32 @@ const ScrollHandle = ({ direction, onPress, visible }) => {
 const START_MIN_SCROLL_STEP = 0.1;
 const START_MAX_SCROLL_STEP = 5;
 
-const calculateSpeed = (distance, threshold) => {
-    'worklet';
-    // proximity: 0 at threshold edge, 1 exactly at the boundary (closest to edge)
-    const clamped = Math.max(0, Math.min(1, distance / threshold));
-    const proximity = 1 - clamped;
-    // ease-in using normalized exponential curve for a very smooth slow start and strong acceleration
-    const k = 0.01; // steepness
-    const eased = (1 - Math.exp(-k * proximity)) / (1 - Math.exp(-k));
-    return START_MIN_SCROLL_STEP + (START_MAX_SCROLL_STEP - START_MIN_SCROLL_STEP) * eased;
+const calculateSpeed = (distance: number, threshold: number) => {
+  'worklet';
+  const clamped = Math.max(0, Math.min(1, distance / threshold));
+  const proximity = 1 - clamped;
+  const k = 0.01;
+  const eased = (1 - Math.exp(-k * proximity)) / (1 - Math.exp(-k));
+  return START_MIN_SCROLL_STEP + (START_MAX_SCROLL_STEP - START_MIN_SCROLL_STEP) * eased;
 };
+
+interface ScrollHandlesProps {
+  canScrollLeft: boolean;
+  canScrollRight: boolean;
+  canScrollUp: boolean;
+  canScrollDown: boolean;
+  onScrollLeft: (scrollStep?: number) => void;
+  onScrollRight: (scrollStep?: number) => void;
+  onScrollUp: (scrollStep?: number) => void;
+  onScrollDown: (scrollStep?: number) => void;
+  uiScrollLeft?: UiScrollWorklet;
+  uiScrollRight?: UiScrollWorklet;
+  uiScrollUp?: UiScrollWorklet;
+  uiScrollDown?: UiScrollWorklet;
+  showHandles: boolean;
+  dragPosition?: DragPosition | null;
+  mainTableBodyLayout?: LayoutRect | null;
+}
 
 const ScrollHandles = ({
   canScrollLeft,
@@ -73,12 +100,11 @@ const ScrollHandles = ({
   showHandles,
   dragPosition,
   mainTableBodyLayout,
-}) => {
-  
+}: ScrollHandlesProps) => {
   const insets = useSafeAreaInsets();
-  const frameCallbackRef = useRef(null);
+  const frameCallbackRef = useRef<ReturnType<typeof useFrameCallback> | null>(null);
 
-  const calculateDirection = () => {
+  const calculateDirection = (): ScrollDirection | null => {
     if (!dragPosition || !mainTableBodyLayout) return null;
     const { x, y } = dragPosition;
     const edgeThreshold = 60;
@@ -94,14 +120,13 @@ const ScrollHandles = ({
     const nearBottom = x >= left && x <= right && y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
 
     return nearLeft ? 'left' :
-           nearRight ? 'right' :
-           nearTop ? 'up' :
-           nearBottom ? 'down' :
-           null;
+      nearRight ? 'right' :
+      nearTop ? 'up' :
+      nearBottom ? 'down' :
+      null;
   };
 
-  // Frame callback (runs on UI thread) — compute direction & speed and call UI worklets directly
-  const frameCb = useFrameCallback((/* frameInfo */) => {
+  const frameCb = useFrameCallback(() => {
     'worklet';
     if (!dragPosition || !mainTableBodyLayout) return;
 
@@ -144,11 +169,9 @@ const ScrollHandles = ({
       const distance = bottom - y;
       const speed = calculateSpeed(distance, edgeThreshold);
       if (uiScrollDown) uiScrollDown(speed, false);
-      return;
     }
   }, false);
 
-  // keep reference to frame callback controller so we can start/stop it
   frameCallbackRef.current = frameCb;
 
   useEffect(() => {
@@ -200,7 +223,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    pointerEvents: 'box-none', // Allow touches to pass through to underlying elements
+    pointerEvents: 'box-none',
   },
   handle: {
     position: 'absolute',

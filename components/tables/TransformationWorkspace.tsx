@@ -1,10 +1,29 @@
 import React, { forwardRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import VerticalArrowedScrollView from '../shared/VerticalArrowedScrollView';
-import { OPERATION_TYPES, allGrammarRulesExplanations, tableGrammarRuleMapping } from '../../utils/types';
+import {
+  OPERATION_TYPES,
+  allGrammarRulesExplanations,
+  tableGrammarRuleMapping,
+  type Operation,
+  type WordOperationSequence,
+} from '../../utils/domain';
+import type { ScrollWorkspaceHandle } from '../../types/ui';
 import AnimatedWord from './AnimatedWord';
 
-// Transformation Tools Component
+type SequenceWithHint = WordOperationSequence & { showHint?: boolean };
+
+interface TransformationToolsProps {
+  operation: Operation | null | undefined;
+  sequence: SequenceWithHint | null | undefined;
+  selectedLetters: Set<number>;
+  showVariants: boolean;
+  onHintToggle: () => void;
+  onSubmitRemoval: () => void;
+  onVariantSelect: (variant: string) => void;
+  onShowVariants: () => void;
+}
+
 const TransformationTools = ({
   operation,
   sequence,
@@ -13,9 +32,9 @@ const TransformationTools = ({
   onHintToggle,
   onSubmitRemoval,
   onVariantSelect,
-  onShowVariants
-}) => {
-  if (!operation) return null;
+  onShowVariants,
+}: TransformationToolsProps) => {
+  if (!operation || !sequence) return null;
 
   return (
     <View style={styles.toolsContainer}>
@@ -46,11 +65,11 @@ const TransformationTools = ({
         </TouchableOpacity>
       )}
 
-      {(operation.type === OPERATION_TYPES.INSERT) && (
+      {operation.type === OPERATION_TYPES.INSERT && (
         <View style={styles.variantContainer}>
           <Text style={styles.variantLabel}>Choose what to insert:</Text>
           <View style={styles.variantsGrid}>
-            {operation.variants.map(variant => (
+            {(operation.variants ?? []).map((variant) => (
               <TouchableOpacity
                 key={variant}
                 style={styles.variantButton}
@@ -66,8 +85,20 @@ const TransformationTools = ({
   );
 };
 
-// Main Transformation Workspace Component
-const TransformationWorkspace = forwardRef(({
+interface TransformationWorkspaceProps {
+  sequence: SequenceWithHint | null | undefined;
+  operation: Operation | null | undefined;
+  selectedLetters: Set<number>;
+  showVariants: boolean;
+  wordDisplayRef: React.RefObject<View | null>;
+  onLetterPress: (letter: string, index: number) => void;
+  onHintToggle: () => void;
+  onSubmitRemoval: () => void;
+  onVariantSelect: (variant: string) => void;
+  onShowVariants: () => void;
+}
+
+const TransformationWorkspace = forwardRef<ScrollWorkspaceHandle, TransformationWorkspaceProps>(({
   sequence,
   operation,
   selectedLetters,
@@ -77,7 +108,7 @@ const TransformationWorkspace = forwardRef(({
   onHintToggle,
   onSubmitRemoval,
   onVariantSelect,
-  onShowVariants
+  onShowVariants,
 }, ref) => {
   return (
     <VerticalArrowedScrollView
@@ -90,8 +121,8 @@ const TransformationWorkspace = forwardRef(({
       downArrowStyle={styles.downArrow}
     >
       <AnimatedWord
-        sequence={sequence}
-        operation={operation}
+        sequence={sequence ?? null}
+        operation={operation ?? undefined}
         selectedLetters={selectedLetters}
         wordDisplayRef={wordDisplayRef}
         onLetterPress={onLetterPress}
@@ -200,11 +231,9 @@ const styles = StyleSheet.create({
     fontFamily: 'ComicSansMS',
   },
   workspaceContent: {
-    paddingBottom: 20, // Extra padding at bottom for scroll
+    paddingBottom: 20,
   },
-  arrowsContainer: {
-    // Custom positioning for transformation workspace
-  },
+  arrowsContainer: {},
   upArrow: {
     top: 20,
     right: 10,

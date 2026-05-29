@@ -5,15 +5,17 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import type { LearningType, RootStackScreenProps } from '../../navigation/types';
 
-const LearningTypeSelectionScreen = ({ navigation, route }) => {
-  const { selectedLanguage } = route.params || {};
+type Props = RootStackScreenProps<'LearningTypeSelection'>;
 
-  const handleLearningTypeSelect = (learningType) => {
-    // Navigate to topic selection with the chosen learning type
+const LearningTypeSelectionScreen = ({ navigation, route }: Props) => {
+  const { selectedLanguage } = route.params;
+
+  const handleLearningTypeSelect = (learningType: LearningType) => {
     navigation.navigate('TopicSelection', {
       selectedLanguage,
-      learningType, // 'tables' or 'words'
+      learningType,
     });
   };
 

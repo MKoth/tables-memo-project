@@ -5,14 +5,39 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Alert,
+  type ListRenderItemInfo,
 } from 'react-native';
+import type { LearningType, RootStackScreenProps } from '../../navigation/types';
 
-const TopicSelectionScreen = ({ navigation, route }) => {
-  const { selectedLanguage, learningType } = route.params || {};
-  const [selectedTopics, setSelectedTopics] = useState([]);
+type Props = RootStackScreenProps<'TopicSelection'>;
 
-  // Mock data based on learning type
-  const getTopicsData = () => {
+interface TableTopic {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  rows: string[];
+  columns: string[];
+}
+
+interface WordTopic {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  wordCount: number;
+}
+
+type Topic = TableTopic | WordTopic;
+
+const isTableTopic = (topic: Topic): topic is TableTopic => 'rows' in topic;
+
+const TopicSelectionScreen = ({ navigation, route }: Props) => {
+  const { selectedLanguage, learningType } = route.params;
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+
+  const getTopicsData = (): Topic[] => {
     if (learningType === 'tables') {
       return [
         {
@@ -40,51 +65,51 @@ const TopicSelectionScreen = ({ navigation, route }) => {
           columns: ['hablar', 'comer', 'vivir'],
         },
       ];
-    } else {
-      // Word topics
-      return [
-        {
-          id: 'greetings',
-          name: 'Greetings & Introductions',
-          description: 'Common phrases for meeting people',
-          tags: ['conversation', 'beginner'],
-          wordCount: 15,
-        },
-        {
-          id: 'food_drink',
-          name: 'Food & Drink',
-          description: 'Vocabulary for restaurants and cooking',
-          tags: ['nouns', 'daily-life', 'beginner'],
-          wordCount: 25,
-        },
-        {
-          id: 'family',
-          name: 'Family Members',
-          description: 'Words for describing family relationships',
-          tags: ['nouns', 'personal', 'beginner'],
-          wordCount: 12,
-        },
-      ];
     }
+
+    return [
+      {
+        id: 'greetings',
+        name: 'Greetings & Introductions',
+        description: 'Common phrases for meeting people',
+        tags: ['conversation', 'beginner'],
+        wordCount: 15,
+      },
+      {
+        id: 'food_drink',
+        name: 'Food & Drink',
+        description: 'Vocabulary for restaurants and cooking',
+        tags: ['nouns', 'daily-life', 'beginner'],
+        wordCount: 25,
+      },
+      {
+        id: 'family',
+        name: 'Family Members',
+        description: 'Words for describing family relationships',
+        tags: ['nouns', 'personal', 'beginner'],
+        wordCount: 12,
+      },
+    ];
   };
 
   const topics = getTopicsData();
 
-  const toggleTopicSelection = (topicId) => {
-    setSelectedTopics(prev =>
+  const toggleTopicSelection = (topicId: string) => {
+    setSelectedTopics((prev) =>
       prev.includes(topicId)
-        ? prev.filter(id => id !== topicId)
+        ? prev.filter((id) => id !== topicId)
         : [...prev, topicId]
     );
   };
 
   const handleStartSelection = () => {
     if (selectedTopics.length === 0) {
-      alert(`Please select at least one ${learningType === 'tables' ? 'table' : 'word topic'}`);
+      alert(
+        `Please select at least one ${learningType === 'tables' ? 'table' : 'word topic'}`
+      );
       return;
     }
 
-    // Navigate to exercise selection
     navigation.navigate('ExerciseSelection', {
       selectedLanguage,
       learningType,
@@ -92,11 +117,21 @@ const TopicSelectionScreen = ({ navigation, route }) => {
     });
   };
 
-  const renderTopic = ({ item }) => (
+  const getTopicSize = (item: Topic, type: LearningType): string => {
+    if (type === 'tables' && isTableTopic(item)) {
+      return `${item.rows.length} × ${item.columns.length} table`;
+    }
+    if (!isTableTopic(item)) {
+      return `${item.wordCount} words`;
+    }
+    return '';
+  };
+
+  const renderTopic = ({ item }: ListRenderItemInfo<Topic>) => (
     <TouchableOpacity
       style={[
         styles.topicCard,
-        selectedTopics.includes(item.id) && styles.selectedCard
+        selectedTopics.includes(item.id) && styles.selectedCard,
       ]}
       onPress={() => toggleTopicSelection(item.id)}
     >
@@ -108,33 +143,28 @@ const TopicSelectionScreen = ({ navigation, route }) => {
       </View>
       <Text style={styles.topicDescription}>{item.description}</Text>
       <View style={styles.tagsContainer}>
-        {item.tags.map(tag => (
-          <Text key={tag} style={styles.tag}>{tag}</Text>
+        {item.tags.map((tag) => (
+          <Text key={tag} style={styles.tag}>
+            {tag}
+          </Text>
         ))}
       </View>
-      <Text style={styles.topicSize}>
-        {learningType === 'tables'
-          ? `${item.rows.length} × ${item.columns.length} table`
-          : `${item.wordCount} words`
-        }
-      </Text>
+      <Text style={styles.topicSize}>{getTopicSize(item, learningType)}</Text>
     </TouchableOpacity>
   );
 
-  const getTitle = () => {
+  const getTitle = (): string => {
     if (learningType === 'tables') {
       return 'Select Grammar Tables';
-    } else {
-      return 'Select Word Topics';
     }
+    return 'Select Word Topics';
   };
 
-  const getSubtitle = () => {
+  const getSubtitle = (): string => {
     if (learningType === 'tables') {
       return 'Choose one or more grammar tables to practice with';
-    } else {
-      return 'Choose word topics to build your vocabulary';
     }
+    return 'Choose word topics to build your vocabulary';
   };
 
   return (
@@ -145,7 +175,7 @@ const TopicSelectionScreen = ({ navigation, route }) => {
       <FlatList
         data={topics}
         renderItem={renderTopic}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
       />
@@ -161,7 +191,7 @@ const TopicSelectionScreen = ({ navigation, route }) => {
         <TouchableOpacity
           style={[
             styles.primaryButton,
-            selectedTopics.length === 0 && styles.disabledButton
+            selectedTopics.length === 0 && styles.disabledButton,
           ]}
           onPress={handleStartSelection}
           disabled={selectedTopics.length === 0}

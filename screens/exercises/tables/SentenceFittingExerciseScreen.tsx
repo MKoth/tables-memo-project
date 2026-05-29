@@ -10,45 +10,55 @@ import {
 } from 'react-native';
 import TransformationWorkspace from '../../../components/tables/TransformationWorkspace';
 import CircularCountdown from '../../../components/shared/CircularCountdown';
-import { sampleSpanishTable, createSentenceFittingExercise, OPERATION_TYPES, sentenceTemplates } from '../../../utils/types';
+import {
+  sampleSpanishTable,
+  createSentenceFittingExercise,
+  OPERATION_TYPES,
+  sentenceTemplates,
+  type SentenceFittingExercise,
+  type WordOperationSequence,
+} from '../../../utils/domain';
+
+type SequenceWithHint = WordOperationSequence & { showHint?: boolean };
+import type { RootStackScreenProps } from '../../../navigation/types';
+import type { FeedbackMessage, LayoutRect, ScrollWorkspaceHandle } from '../../../types/ui';
 
 const COUNTDOWN_DURATION = 5;
 
-const SentenceFittingExerciseScreen = ({ navigation }) => {
-  const [exerciseState, setExerciseState] = useState(() =>
+type Props = RootStackScreenProps<'SentenceFittingExercise'>;
+
+const SentenceFittingExerciseScreen = ({ navigation }: Props) => {
+  const [exerciseState, setExerciseState] = useState<SentenceFittingExercise>(() =>
     createSentenceFittingExercise(sampleSpanishTable)
   );
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [selectedLetters, setSelectedLetters] = useState(new Set());
+  const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null);
+  const [selectedLetters, setSelectedLetters] = useState<Set<number>>(new Set());
   const [showVariants, setShowVariants] = useState(false);
-  const [animatingWord, setAnimatingWord] = useState(null);
+  const [animatingWord, setAnimatingWord] = useState<string | null>(null);
   const [showingCompletedSentence, setShowingCompletedSentence] = useState(false);
   const [currentSentenceText, setCurrentSentenceText] = useState('');
-  const [autoAdvanceTimeoutId, setAutoAdvanceTimeoutId] = useState(null);
+  const [autoAdvanceTimeoutId, setAutoAdvanceTimeoutId] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [countdown, setCountdown] = useState(COUNTDOWN_DURATION);
-  const feedbackTimeoutRef = useRef(null);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Animation refs
   const flyingWordPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const flyingWordScale = useRef(new Animated.Value(1)).current;
-  const wordDisplayRef = useRef(null);
-  const sentenceDisplayRef = useRef(null);
-  const workspaceScrollRef = useRef(null);
+  const wordDisplayRef = useRef<View>(null);
+  const sentenceDisplayRef = useRef<View>(null);
+  const workspaceScrollRef = useRef<ScrollWorkspaceHandle>(null);
 
-  // Current sequence and operation
   const currentSequence = exerciseState.sequences[exerciseState.currentSequenceIndex];
   const currentOperation = currentSequence?.operations[currentSequence.currentOperation];
 
   useEffect(() => {
     if (currentSequence) {
-      const template = sentenceTemplates[currentSequence.sentenceIndex];
+      const template = sentenceTemplates[currentSequence.sentenceIndex ?? 0];
       setCurrentSentenceText(template);
     }
   }, [currentSequence]);
 
-  // Countdown effect
   useEffect(() => {
-    let intervalId;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
     if (showingCompletedSentence && countdown > 0) {
       intervalId = setInterval(() => {
         setCountdown(prev => prev - 1);
@@ -59,14 +69,13 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
     };
   }, [showingCompletedSentence, countdown]);
 
-  // Reset countdown when advancing
   useEffect(() => {
     if (!showingCompletedSentence) {
       setCountdown(COUNTDOWN_DURATION);
     }
   }, [showingCompletedSentence]);
 
-  const showFeedbackMessage = (message) => {
+  const showFeedbackMessage = (message: FeedbackMessage) => {
     if (feedbackTimeoutRef.current) {
       clearTimeout(feedbackTimeoutRef.current);
     }
@@ -79,7 +88,7 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
     }, 2000);
   };
 
-  const getGlobalPosition = (ref) => {
+  const getGlobalPosition = (ref: React.RefObject<View | null>): Promise<LayoutRect | null> => {
     return new Promise((resolve) => {
       if (ref?.current) {
         ref.current.measureInWindow((x, y, width, height) => {
@@ -91,7 +100,7 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
     });
   };
 
-  const animateWordToSentence = async (word) => {
+  const animateWordToSentence = async (_word: string): Promise<void> => {
     const startPos = await getGlobalPosition(wordDisplayRef);
     const sentencePos = await getGlobalPosition(sentenceDisplayRef);
 
@@ -102,7 +111,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
 
     const headerHeight = 64;
 
-    // Set initial position and scale
     flyingWordPosition.setValue({ x: startPos.x, y: startPos.y - headerHeight });
     flyingWordScale.setValue(1);
 
@@ -120,35 +128,28 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
     });
   };
 
-  const onTransformationComplete = async (word) => {
-    // Scroll workspace to top
+  const onTransformationComplete = async (word: string) => {
     if (workspaceScrollRef.current) {
       workspaceScrollRef.current.scrollTo({ y: 0, animated: true });
     }
 
-    // Wait for scroll
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise<void>(resolve => setTimeout(resolve, 300));
 
-    // Start animation
     setAnimatingWord(word);
 
     try {
       await animateWordToSentence(word);
 
-      // Update sentence with the word
-      const template = sentenceTemplates[currentSequence.sentenceIndex];
+      const template = sentenceTemplates[currentSequence.sentenceIndex ?? 0];
       const completedSentence = template.replace('_____', word);
       setCurrentSentenceText(completedSentence);
 
-      // Show completed sentence
       setShowingCompletedSentence(true);
 
-      // Auto-advance after 10 seconds, or user can click Next
       const timeoutId = setTimeout(() => {
         advanceToNextSequence();
       }, COUNTDOWN_DURATION * 1000);
 
-      // Store timeout ID for cleanup
       setAutoAdvanceTimeoutId(timeoutId);
 
     } catch (e) {
@@ -160,7 +161,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
   };
 
   const advanceToNextSequence = () => {
-    // Clear any pending auto-advance timeout
     if (autoAdvanceTimeoutId) {
       clearTimeout(autoAdvanceTimeoutId);
       setAutoAdvanceTimeoutId(null);
@@ -172,14 +172,12 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
       const nextIndex = prev.currentSequenceIndex + 1;
 
       if (nextIndex >= prev.sequences.length) {
-        // Exercise completed
         return {
           ...prev,
           currentSequenceIndex: nextIndex - 1,
           isCompleted: true
         };
       } else {
-        // Next sequence
         return {
           ...prev,
           currentSequenceIndex: nextIndex
@@ -187,12 +185,11 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
       }
     });
 
-    // Reset states for next sequence
     setSelectedLetters(new Set());
     setShowVariants(false);
   };
 
-  const handleLetterPress = (letter, index) => {
+  const handleLetterPress = (_letter: string, index: number) => {
     if (currentOperation?.type !== OPERATION_TYPES.DELETE) return;
 
     const newSelected = new Set(selectedLetters);
@@ -207,7 +204,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
   const handleSubmitRemoval = async () => {
     if (currentOperation?.type !== OPERATION_TYPES.DELETE) return;
 
-    // Convert selected indexes to the actual indexes that need to be deleted
     const selectedIndexes = Array.from(selectedLetters).sort((a, b) => a - b);
     const expectedStartIndex = currentOperation.index;
     const expectedLength = currentOperation.length;
@@ -217,7 +213,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
       selectedIndexes.every((index, i) => index === expectedIndexes[i]);
 
     if (indexesMatch) {
-      // Correct removal - remove the specified substring
       const before = currentSequence.currentWord.slice(0, currentOperation.index);
       const after = currentSequence.currentWord.slice(currentOperation.index + currentOperation.length);
       const newWord = before + after;
@@ -226,7 +221,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
       const sequenceCompleted = advanceOperation();
 
       if (sequenceCompleted) {
-        // Get the completed word before state update
         const completedWord = newWord;
         await onTransformationComplete(completedWord);
       } else {
@@ -239,11 +233,10 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
     setSelectedLetters(new Set());
   };
 
-  const handleVariantSelect = async (variant) => {
+  const handleVariantSelect = async (variant: string) => {
     if (currentOperation?.type !== OPERATION_TYPES.INSERT) return;
 
     if (variant === currentOperation.text) {
-      // Correct insertion
       const before = currentSequence.currentWord.slice(0, currentOperation.index);
       const after = currentSequence.currentWord.slice(currentOperation.index);
       const newWord = before + variant + after;
@@ -252,7 +245,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
       const sequenceCompleted = advanceOperation();
 
       if (sequenceCompleted) {
-        // Get the completed word before state update
         const completedWord = newWord;
         await onTransformationComplete(completedWord);
       } else {
@@ -265,7 +257,7 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
     setShowVariants(false);
   };
 
-  const updateCurrentWord = (newWord) => {
+  const updateCurrentWord = (newWord: string) => {
     setExerciseState(prev => ({
       ...prev,
       sequences: prev.sequences.map((seq, index) =>
@@ -276,8 +268,7 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
     }));
   };
 
-  const advanceOperation = () => {
-    // Check synchronously if this operation will complete the sequence
+  const advanceOperation = (): boolean => {
     const willCompleteSequence = currentSequence.currentOperation >= currentSequence.operations.length - 1;
 
     setExerciseState(prev => {
@@ -285,10 +276,8 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
       const currentSeq = newSequences[prev.currentSequenceIndex];
 
       if (currentSeq.currentOperation < currentSeq.operations.length - 1) {
-        // Next operation in current sequence
         currentSeq.currentOperation += 1;
       } else {
-        // Sequence completed
         currentSeq.isCompleted = true;
       }
 
@@ -311,7 +300,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
           text: 'Reset',
           style: 'destructive',
           onPress: () => {
-            // Clear any pending auto-advance timeout
             if (autoAdvanceTimeoutId) {
               clearTimeout(autoAdvanceTimeoutId);
               setAutoAdvanceTimeoutId(null);
@@ -347,13 +335,12 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Flying Word Animation Overlay */}
       {animatingWord && (
         <Animated.View
           style={[
             styles.flyingWord,
             {
-              left: 0, // Will be positioned by transform
+              left: 0,
               top: 0,
               transform: [
                 { translateX: flyingWordPosition.x },
@@ -367,7 +354,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
         </Animated.View>
       )}
 
-      {/* Feedback Message */}
       {feedbackMessage && (
         <View style={[
           styles.feedbackContainer,
@@ -378,7 +364,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
         </View>
       )}
 
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Sentence Fitting Exercise</Text>
         <Text style={styles.subtitle}>
@@ -386,7 +371,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
         </Text>
       </View>
 
-      {/* Sentence Display */}
       <View style={styles.sentenceContainer}>
         <View
           ref={sentenceDisplayRef}
@@ -398,7 +382,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Transformation Workspace */}
       {!showingCompletedSentence && (
         <TransformationWorkspace
           ref={workspaceScrollRef}
@@ -411,11 +394,12 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
           onHintToggle={() => {
             setExerciseState(prev => ({
               ...prev,
-              sequences: prev.sequences.map((seq, index) =>
-                index === prev.currentSequenceIndex
-                  ? { ...seq, showHint: !seq.showHint }
-                  : seq
-              )
+              sequences: prev.sequences.map((seq, index) => {
+                const seqWithHint = seq as SequenceWithHint;
+                return index === prev.currentSequenceIndex
+                  ? { ...seqWithHint, showHint: !seqWithHint.showHint }
+                  : seqWithHint;
+              })
             }));
           }}
           onSubmitRemoval={handleSubmitRemoval}
@@ -424,7 +408,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
         />
       )}
 
-      {/* Next Button when showing completed sentence */}
       {showingCompletedSentence && (
         <View style={styles.nextButtonContainer}>
           <Text style={styles.nextWordTitle}>Next word in:</Text>
@@ -448,7 +431,6 @@ const SentenceFittingExerciseScreen = ({ navigation }) => {
         </View>
       )}
 
-      {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, styles.secondaryButton]}
@@ -643,7 +625,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#9ed69e', // Match successful cell green
+    backgroundColor: '#9ed69e',
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: {
