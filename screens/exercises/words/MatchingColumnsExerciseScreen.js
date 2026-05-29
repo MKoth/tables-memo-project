@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
   const leftWordLayouts = useRef(new Map()).current;
   const rightWordLayouts = useRef(new Map()).current;
   const dragStartLayoutsRef = useRef(new Map());
+  const rafRef = useRef(null);
 
   // Show feedback message for 2 seconds
   const showFeedbackMessage = (message) => {
@@ -145,8 +146,8 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           prev.filter((id) => id !== leftId && id !== rightId)
         );
 
-          // Trigger re-measure of remaining items (positions changed)
-          setMeasureSignal((s) => s + 1);
+        // Trigger re-measure of remaining items (positions changed)
+        setMeasureSignal((s) => s + 1);
 
         showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
 
@@ -208,8 +209,9 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     setDraggedWord(text);
   }, [exerciseState.leftWords, leftWordLayouts, rightWordLayouts]);
 
+  // Throttle drag updates with requestAnimationFrame and use the
+  // computed px/py (start + translation) for hit-testing.
   const handleDragUpdate = useCallback((id, absX, absY, translationX, translationY) => {
-    // Compute position from the stored start layout + translation if available
     const start = dragStartLayoutsRef.current.get(id);
     let px = absX;
     let py = absY;
@@ -218,28 +220,38 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
       py = start.y + translationY;
     }
 
-    setDragPosition({ x: px, y: py });
+    // Throttle visual + hit-testing to rAF
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      setDragPosition({ x: px, y: py });
 
-    // Determine which column the drag originated from (check current visible words)
-    const isLeftDrag = exerciseState.leftWords.some(w => w.id === id);
-    const targetLayouts = isLeftDrag ? rightWordLayouts : leftWordLayouts;
+      const isLeftDrag = exerciseState.leftWords.some(w => w.id === id);
+      const targetLayouts = isLeftDrag ? rightWordLayouts : leftWordLayouts;
 
-    let foundHovered = null;
-    for (const [wordId, layout] of targetLayouts.entries()) {
-      if (!layout) continue;
-      if (
-        absX >= layout.x &&
-        absX <= layout.x + layout.width &&
-        absY >= layout.y &&
-        absY <= layout.y + layout.height
-      ) {
-        foundHovered = wordId;
-        break;
+      let foundHovered = null;
+      for (const [wordId, layout] of targetLayouts.entries()) {
+        if (!layout) continue;
+        if (
+          absX >= layout.x &&
+          absX <= layout.x + layout.width &&
+          absY >= layout.y &&
+          absY <= layout.y + layout.height
+        ) {
+          foundHovered = wordId;
+          break;
+        }
       }
-    }
 
-    setHoveredId(foundHovered);
+      setHoveredId(foundHovered);
+    });
   }, [exerciseState, leftWordLayouts, rightWordLayouts]);
+
+  // Cleanup rAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const handleDragEnd = useCallback((id) => {
     if (hoveredId != null) {
@@ -319,11 +331,6 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Match the Columns</Text>
-      </View>
-
       {/* Feedback message */}
       {feedbackMessage && (
         <View
@@ -353,6 +360,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           onDragEnd={handleDragEnd}
           onDragUpdate={handleDragUpdate}
           measureSignal={measureSignal}
+          dragPosition={dragPosition}
         />
 
         <View style={styles.divider} />
@@ -370,6 +378,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           onDragEnd={handleDragEnd}
           onDragUpdate={handleDragUpdate}
           measureSignal={measureSignal}
+          dragPosition={dragPosition}
         />
       </View>
 
@@ -417,6 +426,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#fff',
+    paddingVertical: 15,
   },
   divider: {
     width: 1,
