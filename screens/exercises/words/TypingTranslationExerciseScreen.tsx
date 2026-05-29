@@ -4,41 +4,48 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   TextInput,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { getWordsForTopics, createTypingExercise } from '../../../utils/types';
 import transliterate from '@sindresorhus/transliterate';
+import type { RootStackScreenProps } from '../../../navigation/types';
+import type { FeedbackMessage } from '../../../types/ui';
+import {
+  getWordsForTopics,
+  createTypingExercise,
+  type TypingExercise,
+  type TypingQuestion,
+  type TranslationDirection,
+} from '../../../utils/domain';
 
-function normalizeForComparison(str) {
+type Props = RootStackScreenProps<'TypingTranslationExercise'>;
+
+function normalizeForComparison(str: string): string {
   return transliterate(str)
     .trim()
     .toLowerCase()
-    .normalize("NFD")                     // separate accents
-    .replace(/[\u0300-\u036f]/g, "")      // remove accents
-    .replace(/[^\p{L}\p{N}\s]/gu, "")     // remove punctuation & symbols
-    .replace(/\s+/g, " ");                // collapse multiple spaces
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ');
 }
 
-const TypingTranslationExerciseScreen = ({ route }) => {
-  const { selectedLanguage, learningType, selectedTopics } = route.params || {};
-  
-  // State for direction selection
-  const [direction, setDirection] = useState(null); // 'native-to-studied' or 'studied-to-native'
-  const [exercise, setExercise] = useState(null);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [userInput, setUserInput] = useState('');
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const feedbackTimeoutRef = useRef(null);
-  const inputRef = useRef(null);
+const TypingTranslationExerciseScreen = ({ route }: Props) => {
+  const { selectedTopics } = route.params || {};
 
-  // Initialize exercise when direction is selected
+  const [direction, setDirection] = useState<TranslationDirection | null>(null);
+  const [exercise, setExercise] = useState<TypingExercise | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<TypingQuestion | null>(null);
+  const [userInput, setUserInput] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<TextInput>(null);
+
   useEffect(() => {
     if (direction && !exercise) {
-      const words = getWordsForTopics(selectedTopics);
+      const words = getWordsForTopics(selectedTopics ?? []);
       const newExercise = createTypingExercise(words, direction);
       setExercise(newExercise);
       setCurrentQuestion(newExercise.questions[0]);
@@ -46,85 +53,74 @@ const TypingTranslationExerciseScreen = ({ route }) => {
     }
   }, [direction, exercise, selectedTopics]);
 
-  // Auto-focus input when question changes
   useEffect(() => {
     if (currentQuestion && inputRef.current) {
-      // Small delay to ensure component is mounted
       setTimeout(() => {
-        inputRef.current.focus();
+        inputRef.current?.focus();
         setIsInputFocused(true);
       }, 100);
     }
   }, [currentQuestion]);
 
-  // Handle input submission
-  const handleSubmit = () => {
-    if (!currentQuestion || !userInput.trim()) return;
-
-    // Use Unicode normalization for accent-sensitive comparison
-    const normalizedInput = normalizeForComparison(userInput);
-    const normalizedAnswer = normalizeForComparison(currentQuestion.correctAnswer);
-    const correct = normalizedInput === normalizedAnswer;
-
-    // Update question with user input
-    const updatedQuestion = {
-      ...currentQuestion,
-      userInput: userInput.trim(),
-      isCorrect: correct
-    };
-    setCurrentQuestion(updatedQuestion);
-
-    if (correct) {
-      // Show success feedback
-      showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
-
-      // set user input to correct answer to avoid confusion
-      setUserInput(currentQuestion.correctAnswer);
-
-      // Move to next question after delay
-      setTimeout(() => {
-        moveToNextQuestion();
-      }, 2000);
-    } else {
-      // Show error feedback - keep user's input so they can try again
-      showFeedbackMessage({ type: 'error', text: "Wrong choice!!! Don't worry, just try again!" });
-    }
-  };
-
-  const showFeedbackMessage = (message) => {
-    // Clear any existing timeout
+  const showFeedbackMessage = (message: FeedbackMessage) => {
     if (feedbackTimeoutRef.current) {
       clearTimeout(feedbackTimeoutRef.current);
     }
 
-    // Set new message
     setFeedbackMessage(message);
 
-    // Set new timeout
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedbackMessage(null);
       feedbackTimeoutRef.current = null;
     }, 2000);
   };
 
-  const handleDirectionSelect = (selectedDirection) => {
+  const handleDirectionSelect = (selectedDirection: TranslationDirection) => {
     setDirection(selectedDirection);
   };
 
   const moveToNextQuestion = () => {
-    const currentIndex = exercise.questions.findIndex(q => q.id === currentQuestion.id);
+    if (!exercise || !currentQuestion) return;
+
+    const currentIndex = exercise.questions.findIndex((q) => q.id === currentQuestion.id);
     const nextIndex = currentIndex + 1;
-    
+
     if (nextIndex < exercise.questions.length) {
       setCurrentQuestion(exercise.questions[nextIndex]);
       setUserInput('');
       setIsInputFocused(false);
     } else {
-      // Exercise completed
       setExercise({
         ...exercise,
-        isCompleted: true
+        isCompleted: true,
       });
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!currentQuestion || !userInput.trim()) return;
+
+    const normalizedInput = normalizeForComparison(userInput);
+    const normalizedAnswer = normalizeForComparison(currentQuestion.correctAnswer);
+    const correct = normalizedInput === normalizedAnswer;
+
+    const updatedQuestion: TypingQuestion = {
+      ...currentQuestion,
+      userInput: userInput.trim(),
+      isCorrect: correct,
+    };
+    setCurrentQuestion(updatedQuestion);
+
+    if (correct) {
+      showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
+
+      setUserInput(currentQuestion.correctAnswer);
+
+      setTimeout(() => {
+        moveToNextQuestion();
+      }, 2000);
+    } else {
+      showFeedbackMessage({ type: 'error', text: "Wrong choice!!! Don't worry, just try again!" });
     }
   };
 
@@ -137,13 +133,12 @@ const TypingTranslationExerciseScreen = ({ route }) => {
     setIsInputFocused(false);
   };
 
-  // Render direction selection screen
   if (!direction) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Translation Direction</Text>
         <Text style={styles.subtitle}>Choose which way you want to practice</Text>
-        
+
         <View style={styles.directionOptions}>
           <TouchableOpacity
             style={styles.directionButton}
@@ -151,7 +146,7 @@ const TypingTranslationExerciseScreen = ({ route }) => {
           >
             <Text style={styles.directionButtonText}>English → Spanish</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.directionButton}
             onPress={() => handleDirectionSelect('studied-to-native')}
@@ -159,7 +154,7 @@ const TypingTranslationExerciseScreen = ({ route }) => {
             <Text style={styles.directionButtonText}>Spanish → English</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.footer}>
           <Text style={styles.instructions}>
             Select the direction for translation practice
@@ -169,17 +164,16 @@ const TypingTranslationExerciseScreen = ({ route }) => {
     );
   }
 
-  // Render exercise completion screen
   if (exercise && exercise.isCompleted) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Exercise Completed!</Text>
         <Text style={styles.subtitle}>Great job!</Text>
-        
+
         <View style={styles.completionContainer}>
           <Text style={styles.completionTitle}>Well done!!! You completed all questions!</Text>
         </View>
-        
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.restartButton}
@@ -192,8 +186,7 @@ const TypingTranslationExerciseScreen = ({ route }) => {
     );
   }
 
-  // Render exercise screen
-  if (!currentQuestion) {
+  if (!currentQuestion || !exercise) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Loading...</Text>
@@ -202,41 +195,37 @@ const TypingTranslationExerciseScreen = ({ route }) => {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.container}>
-        {/* Progress bar */}
         <View style={styles.progressBar}>
-          <View 
+          <View
             style={[
-              styles.progressFill, 
+              styles.progressFill,
               {
-                width: `${((exercise.questions.findIndex(q => q.id === currentQuestion.id) + 1) / exercise.total) * 100}%`
-              }
-            ]} 
+                width: `${((exercise.questions.findIndex((q) => q.id === currentQuestion.id) + 1) / exercise.total) * 100}%`,
+              },
+            ]}
           />
         </View>
-        
-        {/* Progress text */}
+
         <Text style={styles.progressText}>
-          {exercise.questions.findIndex(q => q.id === currentQuestion.id) + 1} / {exercise.total}
+          {exercise.questions.findIndex((q) => q.id === currentQuestion.id) + 1} / {exercise.total}
         </Text>
-        
-        {/* Question */}
+
         <View style={styles.questionContainer}>
           <Text style={styles.questionText}>{currentQuestion.question}</Text>
         </View>
-        
-        {/* Input area */}
+
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <TextInput
               ref={inputRef}
               style={[
                 styles.inputField,
-                isInputFocused && styles.inputFieldFocused
+                isInputFocused && styles.inputFieldFocused,
               ]}
               value={userInput}
               onChangeText={setUserInput}
@@ -250,7 +239,6 @@ const TypingTranslationExerciseScreen = ({ route }) => {
               textAlignVertical="center"
               placeholder="Type your answer here..."
               placeholderTextColor="#999"
-              // Keyboard language hints based on translation direction
               keyboardType="default"
               autoCapitalize={direction === 'studied-to-native' ? 'none' : 'words'}
               autoCorrect={false}
@@ -265,8 +253,7 @@ const TypingTranslationExerciseScreen = ({ route }) => {
             )}
           </View>
         </View>
-        
-        {/* Submit button */}
+
         <TouchableOpacity
           style={[styles.submitButton, !userInput.trim() && styles.submitButtonDisabled]}
           onPress={handleSubmit}
@@ -274,8 +261,7 @@ const TypingTranslationExerciseScreen = ({ route }) => {
         >
           <Text style={styles.submitButtonText}>Submit</Text>
         </TouchableOpacity>
-        
-        {/* Feedback - absolutely positioned like other exercises */}
+
         {feedbackMessage && (
           <View style={[
             styles.feedbackContainer,
@@ -289,8 +275,6 @@ const TypingTranslationExerciseScreen = ({ route }) => {
     </KeyboardAvoidingView>
   );
 };
-
-
 
 const styles = StyleSheet.create({
   container: {
@@ -403,7 +387,7 @@ const styles = StyleSheet.create({
   inputField: {
     borderWidth: 0,
     paddingVertical: 10,
-    paddingRight: 40, // Space for clear button
+    paddingRight: 40,
     fontSize: 18,
     color: '#333',
     fontFamily: 'ComicSansMS',
@@ -411,9 +395,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
-  inputFieldFocused: {
-    // No border changes when focused
-  },
+  inputFieldFocused: {},
   clearButton: {
     position: 'absolute',
     right: 10,

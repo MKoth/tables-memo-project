@@ -1,15 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { DragPosition } from '../../types/ui';
 
-const DragOverlay = ({ draggedVariant, dragPosition, isDragging, customVariantStyles = {}, customTextStyles = {} }) => {
+interface DragOverlayProps {
+  draggedVariant: string | null;
+  dragPosition: DragPosition;
+  isDragging: boolean;
+  customVariantStyles?: ViewStyle;
+  customTextStyles?: TextStyle;
+}
+
+const DragOverlay = ({
+  draggedVariant,
+  dragPosition,
+  isDragging,
+  customVariantStyles = {},
+  customTextStyles = {},
+}: DragOverlayProps) => {
   const headerHeight = 64;
   const insets = useSafeAreaInsets();
   const animatedStyle = useAnimatedStyle(() => ({
     position: 'absolute',
-    left: dragPosition.x, // Center the variant on the drag point
-    top: dragPosition.y - headerHeight,  // Center the variant + account for header height (64px)
+    left: dragPosition.x,
+    top: dragPosition.y - headerHeight,
     zIndex: 9999,
     opacity: isDragging ? 1 : 0,
   }), [dragPosition, isDragging]);
@@ -30,13 +45,13 @@ const DragOverlay = ({ draggedVariant, dragPosition, isDragging, customVariantSt
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    pointerEvents: 'none', // Don't interfere with touch events
+    pointerEvents: 'none',
   },
   variant: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#a089d1', // Purple - same as selected variant
+    backgroundColor: '#a089d1',
     minWidth: 70,
     alignItems: 'center',
     justifyContent: 'center',
@@ -48,12 +63,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
-    transform: [{ scale: 1.1 }], // Slightly larger when dragging
+    transform: [{ scale: 1.1 }],
   },
   variantText: {
     fontSize: 14,
     textAlign: 'center',
-    color: '#452563', // Dark purple text
+    color: '#452563',
     fontWeight: 'bold',
     fontFamily: 'ComicSansMS',
   },

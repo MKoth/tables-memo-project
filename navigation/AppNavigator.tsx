@@ -14,8 +14,9 @@ import SentenceFittingExerciseScreen from '../screens/exercises/tables/SentenceF
 import MultipleChoiceTranslationExerciseScreen from '../screens/exercises/words/MultipleChoiceTranslationExerciseScreen';
 import TypingTranslationExerciseScreen from '../screens/exercises/words/TypingTranslationExerciseScreen';
 import MatchingColumnsExerciseScreen from '../screens/exercises/words/MatchingColumnsExerciseScreen';
+import type { RootStackParamList } from './types';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
   return (

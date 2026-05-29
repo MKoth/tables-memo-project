@@ -6,11 +6,23 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
+import type { RootStackScreenProps } from '../../navigation/types';
 
-const ExerciseSelectionScreen = ({ navigation, route }) => {
-  const { selectedLanguage, learningType, selectedTopics } = route.params || {};
+type Props = RootStackScreenProps<'ExerciseSelection'>;
 
-  const getExercisesData = () => {
+interface Exercise {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  difficulty: string;
+  isImplemented: boolean;
+}
+
+const ExerciseSelectionScreen = ({ navigation, route }: Props) => {
+  const { selectedLanguage, learningType, selectedTopics } = route.params;
+
+  const getExercisesData = (): Exercise[] => {
     if (learningType === 'tables') {
       return [
         {
@@ -46,113 +58,83 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
           isImplemented: true,
         },
       ];
-    } else {
-      // Word exercises - all placeholders for now
-      return [
-        {
-          id: 'multiple-choice',
-          name: 'Multiple Choice',
-          description: 'Choose the correct translation from options',
-          icon: '❓',
-          difficulty: 'Beginner',
-          isImplemented: true,
-        },
-        {
-          id: 'typing',
-          name: 'Typing Practice',
-          description: 'Type the correct translation',
-          icon: '⌨️',
-          difficulty: 'Intermediate',
-          isImplemented: true,
-        },
-        {
-          id: 'matching-columns',
-          name: 'Matching Columns',
-          description: 'Match words between left and right columns',
-          icon: '🔗',
-          difficulty: 'Intermediate',
-          isImplemented: true,
-        },
-        {
-          id: 'sentence-building',
-          name: 'Sentence Building',
-          description: 'Build sentences using learned vocabulary',
-          icon: '📄',
-          difficulty: 'Advanced',
-          isImplemented: false,
-        },
-      ];
     }
+
+    return [
+      {
+        id: 'multiple-choice',
+        name: 'Multiple Choice',
+        description: 'Choose the correct translation from options',
+        icon: '❓',
+        difficulty: 'Beginner',
+        isImplemented: true,
+      },
+      {
+        id: 'typing',
+        name: 'Typing Practice',
+        description: 'Type the correct translation',
+        icon: '⌨️',
+        difficulty: 'Intermediate',
+        isImplemented: true,
+      },
+      {
+        id: 'matching-columns',
+        name: 'Matching Columns',
+        description: 'Match words between left and right columns',
+        icon: '🔗',
+        difficulty: 'Intermediate',
+        isImplemented: true,
+      },
+      {
+        id: 'sentence-building',
+        name: 'Sentence Building',
+        description: 'Build sentences using learned vocabulary',
+        icon: '📄',
+        difficulty: 'Advanced',
+        isImplemented: false,
+      },
+    ];
   };
 
   const exercises = getExercisesData();
 
-  const handleExerciseSelect = (exercise) => {
+  const handleExerciseSelect = (exercise: Exercise) => {
     if (!exercise.isImplemented) {
       alert(`${exercise.name} exercise is coming soon!`);
       return;
     }
 
-    // Navigate to the appropriate exercise screen
+    const routeParams = {
+      selectedLanguage,
+      learningType,
+      selectedTopics,
+      exerciseType: exercise.id,
+    };
+
     if (learningType === 'tables' && exercise.id === 'fill-cells') {
-      navigation.navigate('FillCellsExercise', {
-        selectedLanguage,
-        learningType,
-        selectedTopics,
-        exerciseType: exercise.id,
-      });
+      navigation.navigate('FillCellsExercise', routeParams);
     } else if (learningType === 'tables' && exercise.id === 'transformations') {
-      navigation.navigate('WordTransformationExercise', {
-        selectedLanguage,
-        learningType,
-        selectedTopics,
-        exerciseType: exercise.id,
-      });
+      navigation.navigate('WordTransformationExercise', routeParams);
     } else if (learningType === 'tables' && exercise.id === 'sentence-fitting') {
-      navigation.navigate('SentenceFittingExercise', {
-        selectedLanguage,
-        learningType,
-        selectedTopics,
-        exerciseType: exercise.id,
-      });
+      navigation.navigate('SentenceFittingExercise', routeParams);
     } else if (learningType === 'words' && exercise.id === 'multiple-choice') {
-      navigation.navigate('MultipleChoiceTranslationExercise', {
-        selectedLanguage,
-        learningType,
-        selectedTopics,
-        exerciseType: exercise.id,
-      });
+      navigation.navigate('MultipleChoiceTranslationExercise', routeParams);
     } else if (learningType === 'words' && exercise.id === 'typing') {
-      navigation.navigate('TypingTranslationExercise', {
-        selectedLanguage,
-        learningType,
-        selectedTopics,
-        exerciseType: exercise.id,
-      });
+      navigation.navigate('TypingTranslationExercise', routeParams);
     } else if (learningType === 'words' && exercise.id === 'matching-columns') {
-      navigation.navigate('MatchingColumnsExercise', {
-        selectedLanguage,
-        learningType,
-        selectedTopics,
-        exerciseType: exercise.id,
-      });
+      navigation.navigate('MatchingColumnsExercise', routeParams);
     } else {
-      // For now, placeholder navigation
       alert(`${exercise.name} exercise selected! Implementation coming soon.`);
     }
   };
 
-  const getTitle = () => {
-    return learningType === 'tables'
-      ? 'Choose Table Exercise'
-      : 'Choose Word Exercise';
-  };
+  const getTitle = () =>
+    learningType === 'tables' ? 'Choose Table Exercise' : 'Choose Word Exercise';
 
-  const getSubtitle = () => {
-    return learningType === 'tables'
+  const getSubtitle = () =>
+    learningType === 'tables'
       ? 'Select how you want to practice these grammar tables'
       : 'Select how you want to practice these vocabulary topics';
-  };
 
   return (
     <View style={styles.container}>
@@ -165,7 +147,7 @@ const ExerciseSelectionScreen = ({ navigation, route }) => {
             key={exercise.id}
             style={[
               styles.exerciseCard,
-              !exercise.isImplemented && styles.placeholderCard
+              !exercise.isImplemented && styles.placeholderCard,
             ]}
             onPress={() => handleExerciseSelect(exercise)}
           >

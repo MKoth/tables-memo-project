@@ -7,15 +7,16 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import type { RootStackScreenProps } from '../../navigation/types';
 
-const LoginScreen = ({ navigation }) => {
+type Props = RootStackScreenProps<'Login'>;
+
+const LoginScreen = ({ navigation }: Props) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    // For now, simple validation
     if (email && password) {
-      // TODO: Implement actual authentication
       navigation.navigate('LanguageSelection');
     } else {
       Alert.alert('Error', 'Please enter email and password');
@@ -48,7 +49,10 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.link} onPress={() => Alert.alert('Info', 'Sign up coming soon!')}>
+      <TouchableOpacity
+        style={styles.link}
+        onPress={() => Alert.alert('Info', 'Sign up coming soon!')}
+      >
         <Text style={styles.linkText}>Don't have an account? Sign up</Text>
       </TouchableOpacity>
     </View>

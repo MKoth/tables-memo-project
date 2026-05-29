@@ -3,15 +3,25 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg from 'react-native-svg';
 import { Circle } from 'react-native-svg';
 
-const CircularCountdown = ({ 
-  duration = 10, 
-  remainingTime, 
-  onComplete, 
+interface CircularCountdownProps {
+  duration?: number;
+  remainingTime: number;
+  onComplete?: () => void;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  backgroundColor?: string;
+}
+
+const CircularCountdown = ({
+  duration = 10,
+  remainingTime,
+  onComplete,
   size = 120,
   strokeWidth = 8,
   color = '#4A90E2',
-  backgroundColor = '#e0e0e0'
-}) => {
+  backgroundColor = '#e0e0e0',
+}: CircularCountdownProps) => {
   const circumference = (size - strokeWidth) * Math.PI;
   const radius = (size - strokeWidth) / 2;
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -19,19 +29,19 @@ const CircularCountdown = ({
 
   // Add listener to update dashOffset
   useEffect(() => {
-    const listenerId = animatedValue.addListener(({ value }) => {
+    const listenerId = animatedValue.addListener(({ value }: { value: number }) => {
       const currentOffset = circumference * (1 - value);
       setDashOffset(currentOffset);
     });
-    
+
     return () => {
       animatedValue.removeListener(listenerId);
     };
   }, [circumference]);
-  
+
   // Calculate progress (0 to 1)
   const progress = remainingTime / duration;
-  
+
   // Animate the stroke offset when progress changes
   useEffect(() => {
     const animation = Animated.timing(animatedValue, {
@@ -42,11 +52,9 @@ const CircularCountdown = ({
     });
 
     animation.start();
-    
+
     return () => animation.stop(); // Cleanup animation on unmount
   }, [progress]);
-
-  
 
   return (
     <View style={styles.container}>
@@ -61,7 +69,7 @@ const CircularCountdown = ({
             stroke={backgroundColor}
             strokeWidth={strokeWidth}
           />
-          
+
           {/* Progress circle */}
           <Circle
             cx={size / 2}
@@ -76,7 +84,7 @@ const CircularCountdown = ({
             transform={`rotate(-90, ${size / 2}, ${size / 2})`}
           />
         </Svg>
-        
+
         {/* Countdown text */}
         <View style={styles.textContainer}>
           <Text style={[styles.countdownText, { color }]}>

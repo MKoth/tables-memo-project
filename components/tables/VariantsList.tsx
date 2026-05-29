@@ -5,6 +5,17 @@ import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanima
 import { scheduleOnRN } from 'react-native-worklets';
 import VerticalArrowedScrollView from '../shared/VerticalArrowedScrollView';
 
+interface DraggableVariantProps {
+  variant: string;
+  isSelected: boolean;
+  isUsed: boolean;
+  onVariantSelect: (variant: string, variantRef: React.RefObject<View | null>) => void;
+  onDragStart: (variant: string) => void;
+  onDragEnd: (variant: string) => void;
+  onDragUpdate: (x: number, y: number, variant: string) => void;
+  isBeingDragged: boolean;
+}
+
 const DraggableVariant = ({
   variant,
   isSelected,
@@ -14,8 +25,8 @@ const DraggableVariant = ({
   onDragEnd,
   onDragUpdate,
   isBeingDragged,
-}) => {
-  const variantRef = useRef(null);
+}: DraggableVariantProps) => {
+  const variantRef = useRef<View>(null);
   const dragOffset = useSharedValue({ x: 0, y: 0 });
   const isDragging = useSharedValue(false);
 
@@ -26,11 +37,9 @@ const DraggableVariant = ({
       { scale: isDragging.value ? 1.1 : 1 },
     ],
     zIndex: isDragging.value ? 1000 : 1,
-    opacity: isBeingDragged ? 0 : 1, // Hide when being dragged globally
-    backgroundColor: isSelected ? '#a089d1' : '#e6e6fa', // Dark purple for selected, light purple for normal
+    opacity: isBeingDragged ? 0 : 1,
+    backgroundColor: isSelected ? '#a089d1' : '#e6e6fa',
   }), [isBeingDragged, isSelected]);
-
-
 
   const panGesture = Gesture.Pan()
     .onStart(() => {
@@ -75,6 +84,17 @@ const DraggableVariant = ({
   );
 };
 
+interface VariantsListProps {
+  variants: string[];
+  selectedVariant: string | null;
+  onVariantSelect: (variant: string, variantRef: React.RefObject<View | null>) => void;
+  usedVariants?: string[];
+  onVariantDragStart: (variant: string) => void;
+  onVariantDragEnd: (variant: string) => void;
+  onVariantDragUpdate: (x: number, y: number, variant: string) => void;
+  draggedVariant: string | null;
+}
+
 const VariantsList = ({
   variants,
   selectedVariant,
@@ -84,7 +104,7 @@ const VariantsList = ({
   onVariantDragEnd,
   onVariantDragUpdate,
   draggedVariant,
-}) => {
+}: VariantsListProps) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Drag a variant or tap to select:</Text>
@@ -158,13 +178,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     margin: 4,
     borderRadius: 6,
-    backgroundColor: '#e6e6fa', // Light purple
+    backgroundColor: '#e6e6fa',
     minWidth: 70,
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectedVariant: {
-    backgroundColor: '#a089d1', // Purple
+    backgroundColor: '#a089d1',
     transform: [{ scale: 1.05 }],
   },
   usedVariant: {
@@ -184,7 +204,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Comic Sans MS',
   },
   selectedVariantText: {
-    color: '#452563', // Dark purple
+    color: '#452563',
     fontWeight: 'bold',
     fontFamily: 'Comic Sans MS',
   },
@@ -194,7 +214,7 @@ const styles = StyleSheet.create({
   },
   arrowsContainer: {
     position: 'absolute',
-    top: 40, // Below the title
+    top: 40,
     bottom: 0,
     left: 0,
     right: 0,

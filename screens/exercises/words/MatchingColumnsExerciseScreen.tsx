@@ -8,35 +8,41 @@ import {
 } from 'react-native';
 import MatchingColumn from '../../../components/words/MatchingColumn';
 import DragOverlay from '../../../components/tables/DragOverlay';
-import { createMatchingColumnsExercise, getWordsForTopics } from '../../../utils/types';
+import type { RootStackScreenProps } from '../../../navigation/types';
+import type { FeedbackMessage, LayoutRect, DragPosition } from '../../../types/ui';
+import {
+  createMatchingColumnsExercise,
+  getWordsForTopics,
+  type MatchingColumnsExercise,
+} from '../../../utils/domain';
 
-const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
-  const { selectedLanguage, selectedTopics } = route.params || {};
+type Props = RootStackScreenProps<'MatchingColumnsExercise'>;
 
-  // Get words and initialize exercise with native-to-studied direction
+const MatchingColumnsExerciseScreen = ({ navigation, route }: Props) => {
+  const { selectedTopics } = route.params || {};
+
   const words = getWordsForTopics(selectedTopics || ['greetings']);
-  const [exerciseState, setExerciseState] = useState(() =>
+  const [exerciseState, setExerciseState] = useState<MatchingColumnsExercise>(() =>
     createMatchingColumnsExercise(words, 'native-to-studied')
   );
 
-  const [selectedLeft, setSelectedLeft] = useState(null);
-  const [selectedRight, setSelectedRight] = useState(null);
-  const [hoveredId, setHoveredId] = useState(null);
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [wrongMatchIds, setWrongMatchIds] = useState([]);
-  const [fadingOutIds, setFadingOutIds] = useState([]);
-  const [draggedWord, setDraggedWord] = useState(null);
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [selectedRight, setSelectedRight] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null);
+  const [wrongMatchIds, setWrongMatchIds] = useState<string[]>([]);
+  const [fadingOutIds, setFadingOutIds] = useState<string[]>([]);
+  const [draggedWord, setDraggedWord] = useState<string | null>(null);
+  const [dragPosition, setDragPosition] = useState<DragPosition>({ x: 0, y: 0 });
   const [measureSignal, setMeasureSignal] = useState(0);
 
-  const feedbackTimeoutRef = useRef(null);
-  const wrongMatchTimeoutRef = useRef(null);
-  const leftWordLayouts = useRef(new Map()).current;
-  const rightWordLayouts = useRef(new Map()).current;
-  const dragStartLayoutsRef = useRef(new Map());
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrongMatchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leftWordLayouts = useRef(new Map<string, LayoutRect>()).current;
+  const rightWordLayouts = useRef(new Map<string, LayoutRect>()).current;
+  const dragStartLayoutsRef = useRef(new Map<string, LayoutRect>());
 
-  // Show feedback message for 2 seconds
-  const showFeedbackMessage = (message) => {
+  const showFeedbackMessage = (message: FeedbackMessage) => {
     if (feedbackTimeoutRef.current) {
       clearTimeout(feedbackTimeoutRef.current);
     }
@@ -46,12 +52,10 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     }, 2000);
   };
 
-  // Register word layout
   const handleLayoutChange = useCallback(
-    (isLeft) => (wordId, layout) => {
+    (isLeft: boolean) => (wordId: string, layout: LayoutRect | null) => {
       const layouts = isLeft ? leftWordLayouts : rightWordLayouts;
       if (!layout) {
-        // remove layout when word disappears
         layouts.delete(wordId);
         return;
       }
@@ -65,72 +69,19 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     [leftWordLayouts, rightWordLayouts]
   );
 
-  // Check if two words are a correct match
-  const isCorrectMatch = (leftId, rightId) => {
+  const isCorrectMatch = (leftId: string, rightId: string) => {
     return exerciseState.matches.some(
       ([l, r]) => l === leftId && r === rightId
     );
   };
 
-  // Handle word press (click selection)
-  const handleWordPress = (wordId) => {
-    // Check if word is already matched
-    if (exerciseState.currentMatches.some(([l, r]) => l === wordId || r === wordId)) {
-      return;
-    }
-
-    const isLeftWord = exerciseState.leftWords.some(w => w.id === wordId);
-    const isRightWord = exerciseState.rightWords.some(w => w.id === wordId);
-
-    if (isLeftWord) {
-      if (selectedLeft === wordId) {
-        // Deselect
-        setSelectedLeft(null);
-      } else {
-        // Select left word
-        setSelectedLeft(wordId);
-        // If right is already selected, attempt match
-        if (selectedRight) {
-          const isCorrect = attemptMatch(wordId, selectedRight);
-          if (isCorrect) {
-            setSelectedLeft(null);
-            setSelectedRight(null);
-          } else {
-            setSelectedLeft(null);
-          }
-        }
-      }
-    } else if (isRightWord) {
-      if (selectedRight === wordId) {
-        // Deselect
-        setSelectedRight(null);
-      } else {
-        // Select right word
-        setSelectedRight(wordId);
-        // If left is already selected, attempt match
-        if (selectedLeft) {
-          const isCorrect = attemptMatch(selectedLeft, wordId);
-          if (isCorrect) {
-            setSelectedLeft(null);
-            setSelectedRight(null);
-          } else {
-            setSelectedRight(null);
-          }
-        }
-      }
-    }
-  };
-
-  // Attempt to match two words
-  const attemptMatch = (leftId, rightId) => {
+  const attemptMatch = (leftId: string, rightId: string) => {
     if (isCorrectMatch(leftId, rightId)) {
-      // Correct match - fade out animation
       setFadingOutIds((prev) => [...prev, leftId, rightId]);
 
-      // After fade-out animation (300ms), remove from state
       setTimeout(() => {
         setExerciseState((prev) => {
-          const newCurrentMatches = [...prev.currentMatches, [leftId, rightId]];
+          const newCurrentMatches = [...prev.currentMatches, [leftId, rightId] as [string, string]];
           const isCompleted = newCurrentMatches.length === prev.total;
 
           return {
@@ -145,8 +96,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           prev.filter((id) => id !== leftId && id !== rightId)
         );
 
-          // Trigger re-measure of remaining items (positions changed)
-          setMeasureSignal((s) => s + 1);
+        setMeasureSignal((s) => s + 1);
 
         showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
 
@@ -162,9 +112,8 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
 
       return true;
     } else {
-      // Wrong match - show error on both words
       setWrongMatchIds([leftId, rightId]);
-      showFeedbackMessage({ type: 'error', text: "Wrong match! Try again!" });
+      showFeedbackMessage({ type: 'error', text: 'Wrong match! Try again!' });
 
       if (wrongMatchTimeoutRef.current) {
         clearTimeout(wrongMatchTimeoutRef.current);
@@ -176,7 +125,47 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     }
   };
 
-  // Handle word press (click selection)
+  const handleWordPress = (wordId: string) => {
+    if (exerciseState.currentMatches.some(([l, r]) => l === wordId || r === wordId)) {
+      return;
+    }
+
+    const isLeftWord = exerciseState.leftWords.some((w) => w.id === wordId);
+    const isRightWord = exerciseState.rightWords.some((w) => w.id === wordId);
+
+    if (isLeftWord) {
+      if (selectedLeft === wordId) {
+        setSelectedLeft(null);
+      } else {
+        setSelectedLeft(wordId);
+        if (selectedRight) {
+          const isCorrect = attemptMatch(wordId, selectedRight);
+          if (isCorrect) {
+            setSelectedLeft(null);
+            setSelectedRight(null);
+          } else {
+            setSelectedLeft(null);
+          }
+        }
+      }
+    } else if (isRightWord) {
+      if (selectedRight === wordId) {
+        setSelectedRight(null);
+      } else {
+        setSelectedRight(wordId);
+        if (selectedLeft) {
+          const isCorrect = attemptMatch(selectedLeft, wordId);
+          if (isCorrect) {
+            setSelectedLeft(null);
+            setSelectedRight(null);
+          } else {
+            setSelectedRight(null);
+          }
+        }
+      }
+    }
+  };
+
   const visibleLeftWords = exerciseState.leftWords.filter(
     (w) => !exerciseState.currentMatches.some(([l]) => l === w.id)
   );
@@ -189,9 +178,8 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     return Math.round((exerciseState.score / exerciseState.total) * 100);
   };
 
-  // Drag event handlers
-  const handleDragStart = useCallback((id, text) => {
-    const isLeftDrag = exerciseState.leftWords.some(w => w.id === id);
+  const handleDragStart = useCallback((id: string, text: string) => {
+    const isLeftDrag = exerciseState.leftWords.some((w) => w.id === id);
     if (isLeftDrag) {
       setSelectedLeft(id);
       setSelectedRight(null);
@@ -199,7 +187,6 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
       setSelectedRight(id);
       setSelectedLeft(null);
     }
-    // Store the starting layout for this dragged item (if available)
     const startLayouts = isLeftDrag ? leftWordLayouts : rightWordLayouts;
     const startLayout = startLayouts.get(id);
     if (startLayout) {
@@ -208,8 +195,13 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     setDraggedWord(text);
   }, [exerciseState.leftWords, leftWordLayouts, rightWordLayouts]);
 
-  const handleDragUpdate = useCallback((id, absX, absY, translationX, translationY) => {
-    // Compute position from the stored start layout + translation if available
+  const handleDragUpdate = useCallback((
+    id: string,
+    absX: number,
+    absY: number,
+    translationX: number,
+    translationY: number
+  ) => {
     const start = dragStartLayoutsRef.current.get(id);
     let px = absX;
     let py = absY;
@@ -220,11 +212,10 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
 
     setDragPosition({ x: px, y: py });
 
-    // Determine which column the drag originated from (check current visible words)
-    const isLeftDrag = exerciseState.leftWords.some(w => w.id === id);
+    const isLeftDrag = exerciseState.leftWords.some((w) => w.id === id);
     const targetLayouts = isLeftDrag ? rightWordLayouts : leftWordLayouts;
 
-    let foundHovered = null;
+    let foundHovered: string | null = null;
     for (const [wordId, layout] of targetLayouts.entries()) {
       if (!layout) continue;
       if (
@@ -241,10 +232,11 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     setHoveredId(foundHovered);
   }, [exerciseState, leftWordLayouts, rightWordLayouts]);
 
-  const handleDragEnd = useCallback((id) => {
+  const handleDragEnd = useCallback((id: string) => {
     if (hoveredId != null) {
-      const isLeftDrag = exerciseState.leftWords.some(w => w.id === id);
-      let leftId, rightId;
+      const isLeftDrag = exerciseState.leftWords.some((w) => w.id === id);
+      let leftId: string;
+      let rightId: string;
       if (isLeftDrag) {
         leftId = id;
         rightId = hoveredId;
@@ -269,7 +261,6 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
     setDraggedWord(null);
     setDragPosition({ x: 0, y: 0 });
     setHoveredId(null);
-    // cleanup stored start layout
     dragStartLayoutsRef.current.delete(id);
   }, [exerciseState.leftWords, hoveredId, attemptMatch]);
 
@@ -319,12 +310,10 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Match the Columns</Text>
       </View>
 
-      {/* Feedback message */}
       {feedbackMessage && (
         <View
           style={[
@@ -338,13 +327,12 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
         </View>
       )}
 
-      {/* Two column layout */}
       <View style={styles.columnsContainer}>
         <MatchingColumn
           words={visibleLeftWords}
           isLeftColumn={true}
           selectedId={selectedLeft}
-          hoveredId={hoveredId && exerciseState.leftWords.some(w => w.id === hoveredId) ? hoveredId : null}
+          hoveredId={hoveredId && exerciseState.leftWords.some((w) => w.id === hoveredId) ? hoveredId : null}
           fadingOutIds={fadingOutIds}
           wrongMatchIds={wrongMatchIds}
           onWordPress={handleWordPress}
@@ -361,7 +349,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
           words={visibleRightWords}
           isLeftColumn={false}
           selectedId={selectedRight}
-          hoveredId={hoveredId && exerciseState.rightWords.some(w => w.id === hoveredId) ? hoveredId : null}
+          hoveredId={hoveredId && exerciseState.rightWords.some((w) => w.id === hoveredId) ? hoveredId : null}
           fadingOutIds={fadingOutIds}
           wrongMatchIds={wrongMatchIds}
           onWordPress={handleWordPress}
@@ -373,7 +361,6 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Drag Overlay */}
       <DragOverlay
         draggedVariant={draggedWord}
         dragPosition={dragPosition}

@@ -1,6 +1,31 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
+import type { CellData } from '../../utils/domain';
+import type { LayoutRect } from '../../types/ui';
+
+interface TableCellProps {
+  cell: CellData | null;
+  rowLabel?: string;
+  colLabel?: string;
+  onPress: (cellRef: React.RefObject<View | null>) => void;
+  onDrop?: () => void;
+  showAnswer: boolean;
+  isHeader?: boolean;
+  isRowHeader?: boolean;
+  dynamicWidth?: number;
+  isWrong?: boolean;
+  isDragOver?: boolean;
+  registerCellLayout?: (row: number, col: number, layout: LayoutRect) => void;
+  blinkingCell?: { row: number; col: number } | null;
+  blinkAnimation?: SharedValue<number> | null;
+}
 
 const TableCell = ({
   cell,
@@ -17,39 +42,35 @@ const TableCell = ({
   registerCellLayout,
   blinkingCell = null,
   blinkAnimation = null,
-}) => {
-  const cellRef = useRef(null);
-  const cellLayout = useSharedValue({ x: 0, y: 0, width: 0, height: 0 });
+}: TableCellProps) => {
+  const cellRef = useRef<View>(null);
+  const cellLayout = useSharedValue<LayoutRect>({ x: 0, y: 0, width: 0, height: 0 });
   const localBlinkAnimation = useSharedValue(1);
 
-  // Check if this cell should be blinking
   const isBlinkingCell = blinkingCell && cell && cell.row === blinkingCell.row && cell.col === blinkingCell.col;
 
   useEffect(() => {
-    if (cellRef.current && !isHeader && registerCellLayout) {
+    if (cellRef.current && !isHeader && registerCellLayout && cell) {
       cellRef.current.measureInWindow((x, y, width, height) => {
-        const layout = { x, y, width, height };
+        const layout: LayoutRect = { x, y, width, height };
         cellLayout.value = layout;
         registerCellLayout(cell.row, cell.col, layout);
       });
     }
   }, [cell, registerCellLayout, isHeader]);
 
-  // Handle blinking animation
   useEffect(() => {
     if (isBlinkingCell) {
-      // Start blinking animation - much more noticeable
       localBlinkAnimation.value = withRepeat(
         withTiming(0.2, { duration: 600 }),
-        -1, // Infinite repeat
-        true // Reverse animation (fade out then in)
+        -1,
+        true
       );
     } else {
-      // Stop blinking and reset to full opacity
       localBlinkAnimation.value = 1;
     }
   }, [isBlinkingCell, localBlinkAnimation]);
-  
+
   const getCellStyle = () => {
     if (isHeader) {
       return styles.headerCell;
@@ -60,14 +81,14 @@ const TableCell = ({
     }
 
     if (showAnswer) {
-      if (cell.isFilled) {
-        return cell.isCorrect ? styles.correctCell : styles.incorrectCell;
+      if (cell!.isFilled) {
+        return cell!.isCorrect ? styles.correctCell : styles.incorrectCell;
       } else {
         return styles.emptyCell;
       }
     }
 
-    if (cell.isFilled) {
+    if (cell!.isFilled) {
       return styles.filledCell;
     }
 
@@ -86,16 +107,16 @@ const TableCell = ({
       return rowLabel || colLabel;
     }
 
-    if (showAnswer && !cell.isFilled) {
-      return cell.correctValue;
+    if (showAnswer && !cell!.isFilled) {
+      return cell!.correctValue;
     }
 
-    return cell.currentValue || '';
+    return cell!.currentValue || '';
   };
 
   const getFlexStyle = () => {
     if (isRowHeader) {
-      return [styles.rowHeaderCell, dynamicWidth && { width: dynamicWidth }];
+      return [styles.rowHeaderCell, dynamicWidth != null ? { width: dynamicWidth } : null];
     }
     return styles.flexCell;
   };
@@ -104,7 +125,6 @@ const TableCell = ({
     let opacity = isDragOver ? 0.7 : 1;
     let scale = isDragOver ? 1.05 : 1;
 
-    // Apply blinking animation if this is the blinking cell
     if (isBlinkingCell) {
       opacity = localBlinkAnimation.value;
     }
@@ -144,18 +164,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyCell: {
-    backgroundColor: '#e7efe9', // Light green
+    backgroundColor: '#e7efe9',
     borderStyle: 'dashed',
   },
   emptyHoveredCell: {
-    backgroundColor: '#618e6c', // Darker green
+    backgroundColor: '#618e6c',
     borderStyle: 'dashed',
   },
   filledCell: {
-    backgroundColor: '#9ed69e', // Successfully filled - darker green
+    backgroundColor: '#9ed69e',
   },
   correctCell: {
-    backgroundColor: '#9ed69e', // Successfully filled - darker green
+    backgroundColor: '#9ed69e',
   },
   incorrectCell: {
     backgroundColor: '#ffebee',
@@ -178,13 +198,13 @@ const styles = StyleSheet.create({
   },
   rowHeaderCell: {
     flex: 0,
-    width: 80, // Fixed width for first column to ensure consistent table layout
+    width: 80,
   },
   flexCell: {
     flex: 1,
   },
   wrongCell: {
-    backgroundColor: '#ffcdd2', // Light red background
+    backgroundColor: '#ffcdd2',
   },
 });
 

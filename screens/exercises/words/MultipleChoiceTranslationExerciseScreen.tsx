@@ -5,89 +5,94 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
 } from 'react-native';
-import { getWordsForTopics, createMultipleChoiceExercise } from '../../../utils/types';
+import type { RootStackScreenProps } from '../../../navigation/types';
+import type { FeedbackMessage } from '../../../types/ui';
+import {
+  getWordsForTopics,
+  createMultipleChoiceExercise,
+  type MultipleChoiceExercise,
+  type MultipleChoiceQuestion,
+  type TranslationDirection,
+} from '../../../utils/domain';
 
-const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
-  const { selectedLanguage, learningType, selectedTopics } = route.params || {};
-  
-  // State for direction selection
-  const [direction, setDirection] = useState(null); // 'native-to-studied' or 'studied-to-native'
-  const [exercise, setExercise] = useState(null);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
+type Props = RootStackScreenProps<'MultipleChoiceTranslationExercise'>;
+
+type CurrentMultipleChoiceQuestion = MultipleChoiceQuestion & {
+  selectedChoice?: string;
+};
+
+const MultipleChoiceTranslationExerciseScreen = ({ route }: Props) => {
+  const { selectedTopics } = route.params || {};
+
+  const [direction, setDirection] = useState<TranslationDirection | null>(null);
+  const [exercise, setExercise] = useState<MultipleChoiceExercise | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<CurrentMultipleChoiceQuestion | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<FeedbackMessage | null>(null);
   const [score, setScore] = useState(0);
-  const feedbackTimeoutRef = useRef(null);
+  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Initialize exercise when direction is selected
   useEffect(() => {
     if (direction && !exercise) {
-      const words = getWordsForTopics(selectedTopics);
+      const words = getWordsForTopics(selectedTopics ?? []);
       const newExercise = createMultipleChoiceExercise(words, direction);
       setExercise(newExercise);
       setCurrentQuestion(newExercise.questions[0]);
     }
   }, [direction, exercise, selectedTopics]);
 
-  const showFeedbackMessage = (message) => {
-    // Clear any existing timeout
+  const showFeedbackMessage = (message: FeedbackMessage) => {
     if (feedbackTimeoutRef.current) {
       clearTimeout(feedbackTimeoutRef.current);
     }
 
-    // Set new message
     setFeedbackMessage(message);
 
-    // Set new timeout
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedbackMessage(null);
       feedbackTimeoutRef.current = null;
     }, 2000);
   };
 
-  const handleDirectionSelect = (selectedDirection) => {
+  const handleDirectionSelect = (selectedDirection: TranslationDirection) => {
     setDirection(selectedDirection);
   };
 
-  const handleAnswerSelect = (selectedChoice) => {
+  const moveToNextQuestion = () => {
+    if (!exercise || !currentQuestion) return;
+
+    const currentIndex = exercise.questions.findIndex((q) => q.id === currentQuestion.id);
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex < exercise.questions.length) {
+      setCurrentQuestion(exercise.questions[nextIndex]);
+    } else {
+      setExercise({
+        ...exercise,
+        isCompleted: true,
+      });
+    }
+  };
+
+  const handleAnswerSelect = (selectedChoice: string) => {
     if (!currentQuestion) return;
-    
+
     const correct = selectedChoice === currentQuestion.correctAnswer;
-    
-    // Update question with selected choice
-    const updatedQuestion = {
+
+    const updatedQuestion: CurrentMultipleChoiceQuestion = {
       ...currentQuestion,
-      selectedChoice: selectedChoice
+      selectedChoice: selectedChoice,
     };
     setCurrentQuestion(updatedQuestion);
-    
+
     if (correct) {
-      // Show success feedback
       showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
-      
-      // Move to next question after delay
+
       setTimeout(() => {
         moveToNextQuestion();
       }, 2000);
     } else {
-      // Show error feedback
       showFeedbackMessage({ type: 'error', text: "Wrong choice!!! Don't worry, just try again!" });
-    }
-  };
-
-  const moveToNextQuestion = () => {
-    const currentIndex = exercise.questions.findIndex(q => q.id === currentQuestion.id);
-    const nextIndex = currentIndex + 1;
-    
-    if (nextIndex < exercise.questions.length) {
-      setCurrentQuestion(exercise.questions[nextIndex]);
-    } else {
-      // Exercise completed
-      setExercise({
-        ...exercise,
-        isCompleted: true
-      });
     }
   };
 
@@ -99,13 +104,12 @@ const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
     setScore(0);
   };
 
-  // Render direction selection screen
   if (!direction) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Translation Direction</Text>
         <Text style={styles.subtitle}>Choose which way you want to practice</Text>
-        
+
         <View style={styles.directionOptions}>
           <TouchableOpacity
             style={styles.directionButton}
@@ -113,7 +117,7 @@ const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
           >
             <Text style={styles.directionButtonText}>English → Spanish</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.directionButton}
             onPress={() => handleDirectionSelect('studied-to-native')}
@@ -121,7 +125,7 @@ const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
             <Text style={styles.directionButtonText}>Spanish → English</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.footer}>
           <Text style={styles.instructions}>
             Select the direction for translation practice
@@ -131,17 +135,16 @@ const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
     );
   }
 
-  // Render exercise completion screen
   if (exercise && exercise.isCompleted) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Exercise Completed!</Text>
         <Text style={styles.subtitle}>Great job!</Text>
-        
+
         <View style={styles.completionContainer}>
           <Text style={styles.completionTitle}>Well done!!! You completed all questions!</Text>
         </View>
-        
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.restartButton}
@@ -154,8 +157,7 @@ const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
     );
   }
 
-  // Render exercise screen
-  if (!currentQuestion) {
+  if (!currentQuestion || !exercise) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Loading...</Text>
@@ -165,29 +167,25 @@ const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Progress bar */}
       <View style={styles.progressBar}>
-        <View 
+        <View
           style={[
-            styles.progressFill, 
+            styles.progressFill,
             {
-              width: `${((exercise.questions.findIndex(q => q.id === currentQuestion.id) + 1) / exercise.total) * 100}%`
-            }
-          ]} 
+              width: `${((exercise.questions.findIndex((q) => q.id === currentQuestion.id) + 1) / exercise.total) * 100}%`,
+            },
+          ]}
         />
       </View>
-      
-      {/* Progress text */}
+
       <Text style={styles.progressText}>
-        {exercise.questions.findIndex(q => q.id === currentQuestion.id) + 1} / {exercise.total}
+        {exercise.questions.findIndex((q) => q.id === currentQuestion.id) + 1} / {exercise.total}
       </Text>
-      
-      {/* Question */}
+
       <View style={styles.questionContainer}>
         <Text style={styles.questionText}>{currentQuestion.question}</Text>
       </View>
-      
-      {/* Choices */}
+
       <ScrollView style={styles.choicesContainer}>
         {currentQuestion.choices.map((choice, index) => (
           <TouchableOpacity
@@ -195,7 +193,7 @@ const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
             style={[
               styles.choiceButton,
               currentQuestion.selectedChoice === choice && currentQuestion.selectedChoice === currentQuestion.correctAnswer && styles.correctChoice,
-              currentQuestion.selectedChoice === choice && currentQuestion.selectedChoice !== currentQuestion.correctAnswer && styles.incorrectChoice
+              currentQuestion.selectedChoice === choice && currentQuestion.selectedChoice !== currentQuestion.correctAnswer && styles.incorrectChoice,
             ]}
             onPress={() => handleAnswerSelect(choice)}
           >
@@ -203,8 +201,7 @@ const MultipleChoiceTranslationExerciseScreen = ({ route }) => {
           </TouchableOpacity>
         ))}
       </ScrollView>
-      
-      {/* Feedback - absolutely positioned like other exercises */}
+
       {feedbackMessage && (
         <View style={[
           styles.feedbackContainer,

@@ -1,21 +1,37 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
-import Animated, { 
-  useAnimatedRef, 
-  useSharedValue, 
+import Animated, {
+  useAnimatedRef,
+  useSharedValue,
   useAnimatedScrollHandler,
   scrollTo,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import TableCell from './TableCell';
 import ScrollHandles from './ScrollHandles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { TableData } from '../../utils/domain';
+import type { DragPosition, LayoutRect, ScrollableTableHandle } from '../../types/ui';
 
 const CELL_WIDTH = 80;
 const CELL_HEIGHT = 40;
 const SCROLL_STEP = 100;
 
-const ScrollableTable = forwardRef(({
+interface ScrollableTableProps {
+  table: TableData;
+  onCellPress: (row: number, col: number, cellRef: React.RefObject<View | null>) => void;
+  showAnswers?: boolean;
+  wrongCell?: { row: number; col: number } | null;
+  getCellIsHovered?: (row: number, col: number) => boolean;
+  registerCellLayout?: (row: number, col: number, layout: LayoutRect) => void;
+  draggedVariant?: string | null;
+  dragPosition?: DragPosition | null;
+  blinkingCell?: { row: number; col: number } | null;
+  blinkAnimation?: SharedValue<number> | null;
+}
+
+const ScrollableTable = forwardRef<ScrollableTableHandle, ScrollableTableProps>(({
   table,
   onCellPress,
   showAnswers = false,
@@ -30,7 +46,7 @@ const ScrollableTable = forwardRef(({
   const [firstColumnWidth, setFirstColumnWidth] = useState(80);
   const [tableHeight, setTableHeight] = useState(300);
   const [viewportSize, setViewportSize] = useState({ width: 400, height: 300 });
-  const [mainTableBodyScreenLayout, setMainTableBodyScreenLayout] = useState(null);
+  const [mainTableBodyScreenLayout, setMainTableBodyScreenLayout] = useState<LayoutRect | null>(null);
   const [scrollability, setScrollability] = useState({
     canScrollLeft: false,
     canScrollRight: false,
@@ -38,13 +54,11 @@ const ScrollableTable = forwardRef(({
     canScrollDown: false,
   });
 
-  // Animated refs for scroll synchronization
-  const headerScrollRef = useAnimatedRef();
-  const columnScrollRef = useAnimatedRef();
-  const bodyHorizontalScrollRef = useAnimatedRef();
-  const bodyVerticalScrollRef = useAnimatedRef();
+  const headerScrollRef = useAnimatedRef<Animated.ScrollView>();
+  const columnScrollRef = useAnimatedRef<Animated.ScrollView>();
+  const bodyHorizontalScrollRef = useAnimatedRef<Animated.ScrollView>();
+  const bodyVerticalScrollRef = useAnimatedRef<Animated.ScrollView>();
 
-  // Shared values for scroll positions - single source of truth
   const scrollX = useSharedValue(0);
   const scrollY = useSharedValue(0);
   const maxHorizontalOffset = useSharedValue(0);
@@ -52,8 +66,7 @@ const ScrollableTable = forwardRef(({
 
   const previousAnimationIsHappening = useSharedValue(false);
 
-  // Update scrollability state from worklet
-  const updateScrollability = (scrollXVal, scrollYVal, maxHoriz, maxVert) => {
+  const updateScrollability = (scrollXVal: number, scrollYVal: number, maxHoriz: number, maxVert: number) => {
     setScrollability({
       canScrollLeft: scrollXVal > 0,
       canScrollRight: scrollXVal < maxHoriz,
@@ -62,7 +75,6 @@ const ScrollableTable = forwardRef(({
     });
   };
 
-  // Horizontal scroll synchronization
   const handleHorizontalScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
       if (previousAnimationIsHappening.value) {
@@ -70,7 +82,6 @@ const ScrollableTable = forwardRef(({
       }
       previousAnimationIsHappening.value = true;
       const newScrollX = event.contentOffset.x;
-      // Sync header and body horizontal scrolls
       scrollTo(headerScrollRef, newScrollX, 0, false);
       scrollTo(bodyHorizontalScrollRef, newScrollX, 0, false);
     },
@@ -79,12 +90,10 @@ const ScrollableTable = forwardRef(({
       const newScrollX = event.contentOffset.x;
       scrollX.value = newScrollX;
       previousAnimationIsHappening.value = false;
-      // Update scrollability state
       scheduleOnRN(updateScrollability, newScrollX, scrollY.value, maxHorizontalOffset.value, maxVerticalOffset.value);
-    }
+    },
   });
 
-  // Vertical scroll synchronization
   const handleVerticalScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
       if (previousAnimationIsHappening.value) {
@@ -92,7 +101,6 @@ const ScrollableTable = forwardRef(({
       }
       previousAnimationIsHappening.value = true;
       const newScrollY = event.contentOffset.y;
-      // Sync column and body vertical scrolls
       scrollTo(columnScrollRef, 0, newScrollY, false);
       scrollTo(bodyVerticalScrollRef, 0, newScrollY, false);
     },
@@ -101,13 +109,11 @@ const ScrollableTable = forwardRef(({
       const newScrollY = event.contentOffset.y;
       scrollY.value = newScrollY;
       previousAnimationIsHappening.value = false;
-      // Update scrollability state
       scheduleOnRN(updateScrollability, scrollX.value, newScrollY, maxHorizontalOffset.value, maxVerticalOffset.value);
-    }
+    },
   });
 
-  // Scroll handle functions - regular functions that use worklet internally should run on UI thread
-  const uiScrollLeft = (scrollStep) => {
+  const uiScrollLeft = (scrollStep: number) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.max(0, scrollX.value - scrollStep);
@@ -115,7 +121,7 @@ const ScrollableTable = forwardRef(({
     scrollTo(bodyHorizontalScrollRef, newOffset, 0, true);
   };
 
-  const uiScrollRight = (scrollStep) => {
+  const uiScrollRight = (scrollStep: number) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.min(maxHorizontalOffset.value, scrollX.value + scrollStep);
@@ -123,7 +129,7 @@ const ScrollableTable = forwardRef(({
     scrollTo(bodyHorizontalScrollRef, newOffset, 0, true);
   };
 
-  const uiScrollUp = (scrollStep) => {
+  const uiScrollUp = (scrollStep: number) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.max(0, scrollY.value - scrollStep);
@@ -131,7 +137,7 @@ const ScrollableTable = forwardRef(({
     scrollTo(bodyVerticalScrollRef, 0, newOffset, true);
   };
 
-  const uiScrollDown = (scrollStep) => {
+  const uiScrollDown = (scrollStep: number) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.min(maxVerticalOffset.value, scrollY.value + scrollStep);
@@ -155,20 +161,16 @@ const ScrollableTable = forwardRef(({
     scheduleOnUI(uiScrollDown, scrollStep);
   };
 
-  // Expose scrollToCell method via ref
   useImperativeHandle(ref, () => ({
-    scrollToCell: (row, col) => {
-      // Calculate target scroll positions to center the cell
-      const cellX = col * (CELL_WIDTH + 4); // 4 is margin
+    scrollToCell: (row: number, col: number) => {
+      const cellX = col * (CELL_WIDTH + 4);
       const cellY = row * (CELL_HEIGHT + 4);
 
       const targetX = Math.max(0, cellX - viewportSize.width / 2 + CELL_WIDTH / 2);
       const targetY = Math.max(0, cellY - viewportSize.height / 2 + CELL_HEIGHT / 2);
 
-      // Use worklet and scheduleOnUI to update shared values and scroll
-      const performScroll = (targetXVal, targetYVal) => {
+      const performScroll = (targetXVal: number, targetYVal: number) => {
         'worklet';
-        // Clamp to max offsets
         const clampedX = Math.min(targetXVal, maxHorizontalOffset.value);
         const clampedY = Math.min(targetYVal, maxVerticalOffset.value);
 
@@ -180,19 +182,18 @@ const ScrollableTable = forwardRef(({
         scrollTo(bodyVerticalScrollRef, 0, clampedY, true);
       };
       scheduleOnUI(performScroll, targetX, targetY);
-    }
+    },
   }), [viewportSize]);
 
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    // Calculate the maximum width needed for the first column
-    const tempTextWidths = [];
+    const tempTextWidths: number[] = [];
 
-    table.rows.forEach(rowLabel => {
-      const charWidth = 6; // Approximate character width
-      const padding = 8; // Left + right padding
-      const margin = 2; // Left + right margin
+    table.rows.forEach((rowLabel) => {
+      const charWidth = 6;
+      const padding = 8;
+      const margin = 2;
       const calculatedWidth = (rowLabel.length * charWidth) + padding + margin;
       tempTextWidths.push(calculatedWidth);
     });
@@ -201,25 +202,22 @@ const ScrollableTable = forwardRef(({
     const finalWidth = Math.max(maxContentWidth, 60);
     setFirstColumnWidth(finalWidth);
 
-    // Calculate total table height: header + all rows + padding
     const totalRows = table.rows.length;
-    const tableHeight = (totalRows + 1) * (CELL_HEIGHT + 8); // +1 for header row
-    const paddingHeight = 16; // Container padding
-    const totalHeight = tableHeight + paddingHeight;
+    const calculatedTableHeight = (totalRows + 1) * (CELL_HEIGHT + 8);
+    const paddingHeight = 16;
+    const totalHeight = calculatedTableHeight + paddingHeight;
     setTableHeight(totalHeight);
   }, [table.rows, table.columns]);
 
   return (
     <View style={[styles.container, { maxHeight: tableHeight }]}>
-      {/* TOP LEFT EMPTY CELL */}
       <View style={[styles.emptyCell, { width: firstColumnWidth, height: CELL_HEIGHT }]}>
         {/* Empty corner cell */}
       </View>
 
-      {/* HEADER ROW - Horizontal Scroll Only */}
       <View style={[styles.headerRowContainer, {
         left: firstColumnWidth,
-        right: 8, // Leave space for container padding
+        right: 8,
       }]}>
         <Animated.ScrollView
           ref={headerScrollRef}
@@ -237,14 +235,13 @@ const ScrollableTable = forwardRef(({
         </Animated.ScrollView>
       </View>
 
-      {/* FIRST COLUMN - Vertical Scroll Only */}
       <Animated.ScrollView
         ref={columnScrollRef}
         showsVerticalScrollIndicator={false}
         style={[styles.firstColumn, {
           width: firstColumnWidth,
           top: CELL_HEIGHT,
-          bottom: 8, // Fill to bottom of container
+          bottom: 8,
         }]}
         onScroll={handleVerticalScroll}
         scrollEventThrottle={16}
@@ -256,25 +253,22 @@ const ScrollableTable = forwardRef(({
         ))}
       </Animated.ScrollView>
 
-      {/* MAIN TABLE BODY - Both Horizontal and Vertical Scroll */}
       <View
         style={[styles.mainBodyContainer, {
           left: firstColumnWidth,
           top: CELL_HEIGHT,
-          bottom: 8, // Fill to bottom of container
-          right: 8, // Leave space for container padding
+          bottom: 8,
+          right: 8,
         }]}
         onLayout={(event) => {
           const layout = event.nativeEvent.layout;
           const { width, height } = layout;
           setViewportSize({ width, height });
 
-          // Measure screen coordinates and adjust for header offset
-          event.target.measureInWindow((x, y, width, height) => {
-            setMainTableBodyScreenLayout({ x, y: y - insets.top, width, height });
+          event.target.measureInWindow((x, y, measuredWidth, measuredHeight) => {
+            setMainTableBodyScreenLayout({ x, y: y - insets.top, width: measuredWidth, height: measuredHeight });
           });
 
-          // Update max scroll offsets with actual viewport dimensions
           const CELL_MARGIN = 4;
           const totalTableWidth = table.columns.length * CELL_WIDTH + table.columns.length * CELL_MARGIN;
           const totalTableHeight = table.rows.length * CELL_HEIGHT + table.rows.length * CELL_MARGIN;
@@ -320,8 +314,8 @@ const ScrollableTable = forwardRef(({
                       isHeader={false}
                       isRowHeader={false}
                       dynamicWidth={undefined}
-                      isWrong={isWrongCell}
-                      isDragOver={getCellIsHovered && getCellIsHovered(cell.row, cell.col)}
+                      isWrong={!!isWrongCell}
+                      isDragOver={getCellIsHovered ? getCellIsHovered(cell.row, cell.col) : false}
                       registerCellLayout={registerCellLayout}
                       blinkingCell={blinkingCell}
                       blinkAnimation={blinkAnimation}
@@ -333,7 +327,6 @@ const ScrollableTable = forwardRef(({
           </Animated.ScrollView>
         </Animated.ScrollView>
 
-        {/* Scroll Handles - positioned inside the main body area */}
         <ScrollHandles
           canScrollLeft={scrollability.canScrollLeft}
           canScrollRight={scrollability.canScrollRight}
@@ -343,7 +336,7 @@ const ScrollableTable = forwardRef(({
           onScrollRight={scrollRight}
           onScrollUp={scrollUp}
           onScrollDown={scrollDown}
-          showHandles={true} // Always show
+          showHandles={true}
           dragPosition={dragPosition}
           mainTableBodyLayout={mainTableBodyScreenLayout}
           previousAnimationIsHappening={previousAnimationIsHappening}

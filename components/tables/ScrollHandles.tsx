@@ -1,10 +1,20 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { SharedValue } from 'react-native-reanimated';
+import type { DragPosition, LayoutRect } from '../../types/ui';
 
-const ScrollHandle = ({ direction, onPress, visible }) => {
-  const getIconName = () => {
+type ScrollDirection = 'left' | 'right' | 'up' | 'down';
+
+interface ScrollHandleProps {
+  direction: ScrollDirection;
+  onPress: () => void;
+  visible: boolean;
+}
+
+const ScrollHandle = ({ direction, onPress, visible }: ScrollHandleProps) => {
+  const getIconName = (): keyof typeof Ionicons.glyphMap => {
     switch (direction) {
       case 'left': return 'chevron-back';
       case 'right': return 'chevron-forward';
@@ -14,7 +24,7 @@ const ScrollHandle = ({ direction, onPress, visible }) => {
     }
   };
 
-  const getPositionStyle = () => {
+  const getPositionStyle = (): ViewStyle => {
     switch (direction) {
       case 'left':
         return { left: -10, top: '50%', transform: [{ translateY: -20 }] };
@@ -44,6 +54,21 @@ const ScrollHandle = ({ direction, onPress, visible }) => {
 
 const START_SCROLL_STEP = 30;
 
+interface ScrollHandlesProps {
+  canScrollLeft: boolean;
+  canScrollRight: boolean;
+  canScrollUp: boolean;
+  canScrollDown: boolean;
+  onScrollLeft: (scrollStep?: number) => void;
+  onScrollRight: (scrollStep?: number) => void;
+  onScrollUp: (scrollStep?: number) => void;
+  onScrollDown: (scrollStep?: number) => void;
+  showHandles: boolean;
+  dragPosition: DragPosition | null | undefined;
+  mainTableBodyLayout: LayoutRect | null;
+  previousAnimationIsHappening: SharedValue<boolean>;
+}
+
 const ScrollHandles = ({
   canScrollLeft,
   canScrollRight,
@@ -57,11 +82,10 @@ const ScrollHandles = ({
   dragPosition,
   mainTableBodyLayout,
   previousAnimationIsHappening,
-}) => {
-  
+}: ScrollHandlesProps) => {
   const insets = useSafeAreaInsets();
   const scrollStepRef = React.useRef(START_SCROLL_STEP);
-  const currentDirection = React.useRef(null);
+  const currentDirection = React.useRef<ScrollDirection | null>(null);
 
   if (dragPosition && mainTableBodyLayout && !previousAnimationIsHappening.value) {
     const { x, y } = dragPosition;
@@ -77,7 +101,7 @@ const ScrollHandles = ({
     const nearTop = y >= top && y <= top + edgeThreshold && canScrollUp;
     const nearBottom = y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
 
-    const direction =
+    const direction: ScrollDirection | null =
       nearLeft ? 'left' :
       nearRight ? 'right' :
       nearTop ? 'up' :
@@ -88,16 +112,12 @@ const ScrollHandles = ({
     if (direction === 'up') onScrollUp(scrollStepRef.current);
     if (direction === 'down') onScrollDown(scrollStepRef.current);
     if (currentDirection.current !== direction) {
-      scrollStepRef.current = START_SCROLL_STEP; // Reset scroll step on direction change
+      scrollStepRef.current = START_SCROLL_STEP;
     } else if (direction) {
-      // Increase scroll step for faster scrolling
       scrollStepRef.current = Math.min(scrollStepRef.current + START_SCROLL_STEP, 300);
     }
     currentDirection.current = direction;
   }
-          
-  // }, [canScrollLeft, canScrollRight, canScrollUp, canScrollDown, onScrollLeft, onScrollRight, onScrollUp, onScrollDown, dragPosition, mainTableBodyLayout]);
-
 
   if (!showHandles) return null;
 
@@ -134,7 +154,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    pointerEvents: 'box-none', // Allow touches to pass through to underlying elements
+    pointerEvents: 'box-none',
   },
   handle: {
     position: 'absolute',
