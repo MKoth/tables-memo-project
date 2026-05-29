@@ -113,52 +113,52 @@ const ScrollableTable = forwardRef<ScrollableTableHandle, ScrollableTableProps>(
     },
   });
 
-  const uiScrollLeft = (scrollStep: number) => {
+  const uiScrollLeft = (scrollStep: number, animated: boolean) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.max(0, scrollX.value - scrollStep);
-    scrollTo(headerScrollRef, newOffset, 0, true);
-    scrollTo(bodyHorizontalScrollRef, newOffset, 0, true);
+    scrollTo(headerScrollRef, newOffset, 0, animated);
+    scrollTo(bodyHorizontalScrollRef, newOffset, 0, animated);
   };
 
-  const uiScrollRight = (scrollStep: number) => {
+  const uiScrollRight = (scrollStep: number, animated: boolean) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.min(maxHorizontalOffset.value, scrollX.value + scrollStep);
-    scrollTo(headerScrollRef, newOffset, 0, true);
-    scrollTo(bodyHorizontalScrollRef, newOffset, 0, true);
+    scrollTo(headerScrollRef, newOffset, 0, animated);
+    scrollTo(bodyHorizontalScrollRef, newOffset, 0, animated);
   };
 
-  const uiScrollUp = (scrollStep: number) => {
+  const uiScrollUp = (scrollStep: number, animated: boolean) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.max(0, scrollY.value - scrollStep);
-    scrollTo(columnScrollRef, 0, newOffset, true);
-    scrollTo(bodyVerticalScrollRef, 0, newOffset, true);
+    scrollTo(columnScrollRef, 0, newOffset, animated);
+    scrollTo(bodyVerticalScrollRef, 0, newOffset, animated);
   };
 
-  const uiScrollDown = (scrollStep: number) => {
+  const uiScrollDown = (scrollStep: number, animated: boolean) => {
     'worklet';
     previousAnimationIsHappening.value = true;
     const newOffset = Math.min(maxVerticalOffset.value, scrollY.value + scrollStep);
-    scrollTo(columnScrollRef, 0, newOffset, true);
-    scrollTo(bodyVerticalScrollRef, 0, newOffset, true);
+    scrollTo(columnScrollRef, 0, newOffset, animated);
+    scrollTo(bodyVerticalScrollRef, 0, newOffset, animated);
   };
 
-  const scrollLeft = (scrollStep = SCROLL_STEP) => {
-    scheduleOnUI(uiScrollLeft, scrollStep);
+  const scrollLeft = (scrollStep = SCROLL_STEP, animated = true) => {
+    scheduleOnUI(uiScrollLeft, scrollStep, animated);
   };
 
-  const scrollRight = (scrollStep = SCROLL_STEP) => {
-    scheduleOnUI(uiScrollRight, scrollStep);
+  const scrollRight = (scrollStep = SCROLL_STEP, animated = true) => {
+    scheduleOnUI(uiScrollRight, scrollStep, animated);
   };
 
-  const scrollUp = (scrollStep = SCROLL_STEP) => {
-    scheduleOnUI(uiScrollUp, scrollStep);
+  const scrollUp = (scrollStep = SCROLL_STEP, animated = true) => {
+    scheduleOnUI(uiScrollUp, scrollStep, animated);
   };
 
-  const scrollDown = (scrollStep = SCROLL_STEP) => {
-    scheduleOnUI(uiScrollDown, scrollStep);
+  const scrollDown = (scrollStep = SCROLL_STEP, animated = true) => {
+    scheduleOnUI(uiScrollDown, scrollStep, animated);
   };
 
   useImperativeHandle(ref, () => ({
@@ -277,6 +277,8 @@ const ScrollableTable = forwardRef<ScrollableTableHandle, ScrollableTableProps>(
 
           maxHorizontalOffset.value = maxHoriz;
           maxVerticalOffset.value = maxVert;
+          // Notify JS thread about initial scrollability state so handles show correctly
+          updateScrollability(scrollX.value, scrollY.value, maxHorizontalOffset.value, maxVerticalOffset.value);
         }}
       >
         <Animated.ScrollView
@@ -336,10 +338,13 @@ const ScrollableTable = forwardRef<ScrollableTableHandle, ScrollableTableProps>(
           onScrollRight={scrollRight}
           onScrollUp={scrollUp}
           onScrollDown={scrollDown}
+          uiScrollLeft={uiScrollLeft}
+          uiScrollRight={uiScrollRight}
+          uiScrollUp={uiScrollUp}
+          uiScrollDown={uiScrollDown}
           showHandles={true}
           dragPosition={dragPosition}
           mainTableBodyLayout={mainTableBodyScreenLayout}
-          previousAnimationIsHappening={previousAnimationIsHappening}
         />
       </View>
     </View>

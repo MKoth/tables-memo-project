@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -41,6 +41,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }: Props) => {
   const leftWordLayouts = useRef(new Map<string, LayoutRect>()).current;
   const rightWordLayouts = useRef(new Map<string, LayoutRect>()).current;
   const dragStartLayoutsRef = useRef(new Map<string, LayoutRect>());
+  const rafRef = useRef<number | null>(null);
 
   const showFeedbackMessage = (message: FeedbackMessage) => {
     if (feedbackTimeoutRef.current) {
@@ -96,6 +97,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }: Props) => {
           prev.filter((id) => id !== leftId && id !== rightId)
         );
 
+        // Trigger re-measure of remaining items (positions changed)
         setMeasureSignal((s) => s + 1);
 
         showFeedbackMessage({ type: 'success', text: 'Great job!!!' });
@@ -210,27 +212,36 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }: Props) => {
       py = start.y + translationY;
     }
 
-    setDragPosition({ x: px, y: py });
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      setDragPosition({ x: px, y: py });
 
-    const isLeftDrag = exerciseState.leftWords.some((w) => w.id === id);
-    const targetLayouts = isLeftDrag ? rightWordLayouts : leftWordLayouts;
+      const isLeftDrag = exerciseState.leftWords.some((w) => w.id === id);
+      const targetLayouts = isLeftDrag ? rightWordLayouts : leftWordLayouts;
 
-    let foundHovered: string | null = null;
-    for (const [wordId, layout] of targetLayouts.entries()) {
-      if (!layout) continue;
-      if (
-        absX >= layout.x &&
-        absX <= layout.x + layout.width &&
-        absY >= layout.y &&
-        absY <= layout.y + layout.height
-      ) {
-        foundHovered = wordId;
-        break;
+      let foundHovered: string | null = null;
+      for (const [wordId, layout] of targetLayouts.entries()) {
+        if (!layout) continue;
+        if (
+          px >= layout.x &&
+          px <= layout.x + layout.width &&
+          py >= layout.y &&
+          py <= layout.y + layout.height
+        ) {
+          foundHovered = wordId;
+          break;
+        }
       }
-    }
 
-    setHoveredId(foundHovered);
+      setHoveredId(foundHovered);
+    });
   }, [exerciseState, leftWordLayouts, rightWordLayouts]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const handleDragEnd = useCallback((id: string) => {
     if (hoveredId != null) {
@@ -310,10 +321,6 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }: Props) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Match the Columns</Text>
-      </View>
-
       {feedbackMessage && (
         <View
           style={[
@@ -341,6 +348,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }: Props) => {
           onDragEnd={handleDragEnd}
           onDragUpdate={handleDragUpdate}
           measureSignal={measureSignal}
+          dragPosition={dragPosition}
         />
 
         <View style={styles.divider} />
@@ -358,6 +366,7 @@ const MatchingColumnsExerciseScreen = ({ navigation, route }: Props) => {
           onDragEnd={handleDragEnd}
           onDragUpdate={handleDragUpdate}
           measureSignal={measureSignal}
+          dragPosition={dragPosition}
         />
       </View>
 
@@ -404,6 +413,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#fff',
+    paddingVertical: 15,
   },
   divider: {
     width: 1,

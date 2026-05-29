@@ -1,10 +1,8 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
-  type ListRenderItem,
   type LayoutRectangle,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -12,10 +10,15 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  scrollTo,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScrollHandles from '../tables/ScrollHandles';
 import type { MatchingWord } from '../../utils/domain';
-import type { LayoutRect } from '../../types/ui';
+import type { DragPosition, LayoutRect } from '../../types/ui';
 
 type MeasurableRef = {
   measureInWindow?: (
@@ -187,6 +190,7 @@ interface MatchingColumnProps {
     translationY: number
   ) => void;
   measureSignal?: number;
+  dragPosition?: DragPosition;
 }
 
 const MatchingColumn = ({
@@ -202,9 +206,22 @@ const MatchingColumn = ({
   onDragEnd,
   onDragUpdate,
   measureSignal,
+  dragPosition,
 }: MatchingColumnProps) => {
+  const insets = useSafeAreaInsets();
+  const [mainColumnBodyLayout, setMainColumnBodyLayout] = useState<LayoutRect | null>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
   const wordLayouts = useRef(new Map<string, LayoutRect>()).current;
   const itemRefs = useRef(new Map<string, MeasurableRef>()).current;
+  const listRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useSharedValue(0);
+  const maxVerticalOffset = useSharedValue(0);
+
+  const updateScrollability = (y: number, maxV: number) => {
+    setCanScrollUp(y > 0);
+    setCanScrollDown(y < maxV);
+  };
 
   useEffect(() => {
     const wordIds = new Set(words.map((w) => w.id));
@@ -254,14 +271,44 @@ const MatchingColumn = ({
     }
   }, [itemRefs, handleWordLayout]);
 
+  const onAnimatedScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+    onMomentumEnd: (event) => {
+      scrollY.value = event.contentOffset.y;
+      scheduleOnRN(updateScrollability, event.contentOffset.y, maxVerticalOffset.value);
+    },
+  });
+
+  const uiScrollUp = (scrollStep: number, animated: boolean) => {
+    'worklet';
+    const newOffset = Math.max(0, scrollY.value - scrollStep);
+    scrollY.value = newOffset;
+    scrollTo(listRef, 0, newOffset, animated);
+  };
+
+  const uiScrollDown = (scrollStep: number, animated: boolean) => {
+    'worklet';
+    const newOffset = Math.min(maxVerticalOffset.value, scrollY.value + scrollStep);
+    scrollY.value = newOffset;
+    scrollTo(listRef, 0, newOffset, animated);
+  };
+
+  const scrollUp = (step = 50, animated = true) => {
+    scheduleOnUI(uiScrollUp, step, animated);
+  };
+
+  const scrollDown = (step = 50, animated = true) => {
+    scheduleOnUI(uiScrollDown, step, animated);
+  };
+
   useEffect(() => {
-    if (typeof measureSignal !== 'undefined') {
-      handleScroll();
-    }
+    handleScroll();
   }, [measureSignal, handleScroll]);
 
-  const renderWord: ListRenderItem<MatchingWord> = useCallback(
-    ({ item }) => {
+  const renderWord = useCallback(
+    (item: MatchingWord) => {
       const isSelected = selectedId === item.id;
       const isHovered = hoveredId === item.id;
       const isFadingOut = fadingOutIds.includes(item.id);
@@ -269,6 +316,7 @@ const MatchingColumn = ({
 
       return (
         <MatchingWordItem
+          key={item.id}
           item={item}
           isSelected={isSelected}
           isHovered={isHovered}
@@ -298,18 +346,54 @@ const MatchingColumn = ({
   );
 
   return (
-    <View style={styles.columnContainer}>
-      <FlatList
-        data={words}
-        renderItem={renderWord}
-        keyExtractor={(item) => item.id}
-        extraData={{ hoveredId, fadingOutIds, wrongMatchIds, selectedId }}
-        onScroll={() => handleScroll()}
-        scrollEventThrottle={100}
-        scrollEnabled={true}
+    <View
+      style={styles.columnContainer}
+      onLayout={(event) => {
+        const layout = event.nativeEvent.layout;
+        const { width, height } = layout;
+        try {
+          event.target.measureInWindow((x, y, w, h) => {
+            setMainColumnBodyLayout({ x, y: y - insets.top, width: w, height: h - 30 });
+          });
+        } catch {
+          setMainColumnBodyLayout({ x: 0, y: 0, width, height });
+        }
+
+        const ITEM_MARGIN = 16;
+        const ITEM_MIN_HEIGHT = 50;
+        const totalContentHeight = Math.max(0, words.length * (ITEM_MIN_HEIGHT + ITEM_MARGIN));
+        const maxV = Math.max(0, totalContentHeight - height + 15);
+        maxVerticalOffset.value = maxV;
+        setCanScrollUp(scrollY.value > 0);
+        setCanScrollDown(scrollY.value < maxV);
+      }}
+    >
+      <Animated.ScrollView
+        ref={listRef}
         showsVerticalScrollIndicator={true}
-        bounces={false}
         contentContainerStyle={styles.flatListContent}
+        onScroll={onAnimatedScroll}
+        scrollEventThrottle={16}
+      >
+        {words.map((item) => renderWord(item))}
+      </Animated.ScrollView>
+
+      <ScrollHandles
+        canScrollLeft={false}
+        canScrollRight={false}
+        canScrollUp={canScrollUp}
+        canScrollDown={canScrollDown}
+        onScrollLeft={() => {}}
+        onScrollRight={() => {}}
+        onScrollUp={() => scrollUp()}
+        onScrollDown={() => scrollDown()}
+        uiScrollLeft={null}
+        uiScrollRight={null}
+        uiScrollUp={uiScrollUp}
+        uiScrollDown={uiScrollDown}
+        showHandles={true}
+        dragPosition={dragPosition}
+        mainTableBodyLayout={mainColumnBodyLayout}
       />
     </View>
   );

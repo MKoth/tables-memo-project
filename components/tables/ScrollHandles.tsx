@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, TouchableOpacity, StyleSheet, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { SharedValue } from 'react-native-reanimated';
+import { useFrameCallback } from 'react-native-reanimated';
 import type { DragPosition, LayoutRect } from '../../types/ui';
 
 type ScrollDirection = 'left' | 'right' | 'up' | 'down';
+
+type UiScrollWorklet = ((scrollStep: number, animated: boolean) => void) | null | undefined;
 
 interface ScrollHandleProps {
   direction: ScrollDirection;
@@ -52,7 +54,17 @@ const ScrollHandle = ({ direction, onPress, visible }: ScrollHandleProps) => {
   );
 };
 
-const START_SCROLL_STEP = 30;
+const START_MIN_SCROLL_STEP = 0.1;
+const START_MAX_SCROLL_STEP = 5;
+
+const calculateSpeed = (distance: number, threshold: number) => {
+  'worklet';
+  const clamped = Math.max(0, Math.min(1, distance / threshold));
+  const proximity = 1 - clamped;
+  const k = 0.01;
+  const eased = (1 - Math.exp(-k * proximity)) / (1 - Math.exp(-k));
+  return START_MIN_SCROLL_STEP + (START_MAX_SCROLL_STEP - START_MIN_SCROLL_STEP) * eased;
+};
 
 interface ScrollHandlesProps {
   canScrollLeft: boolean;
@@ -63,10 +75,13 @@ interface ScrollHandlesProps {
   onScrollRight: (scrollStep?: number) => void;
   onScrollUp: (scrollStep?: number) => void;
   onScrollDown: (scrollStep?: number) => void;
+  uiScrollLeft?: UiScrollWorklet;
+  uiScrollRight?: UiScrollWorklet;
+  uiScrollUp?: UiScrollWorklet;
+  uiScrollDown?: UiScrollWorklet;
   showHandles: boolean;
-  dragPosition: DragPosition | null | undefined;
-  mainTableBodyLayout: LayoutRect | null;
-  previousAnimationIsHappening: SharedValue<boolean>;
+  dragPosition?: DragPosition | null;
+  mainTableBodyLayout?: LayoutRect | null;
 }
 
 const ScrollHandles = ({
@@ -78,16 +93,19 @@ const ScrollHandles = ({
   onScrollRight,
   onScrollUp,
   onScrollDown,
+  uiScrollLeft,
+  uiScrollRight,
+  uiScrollUp,
+  uiScrollDown,
   showHandles,
   dragPosition,
   mainTableBodyLayout,
-  previousAnimationIsHappening,
 }: ScrollHandlesProps) => {
   const insets = useSafeAreaInsets();
-  const scrollStepRef = React.useRef(START_SCROLL_STEP);
-  const currentDirection = React.useRef<ScrollDirection | null>(null);
+  const frameCallbackRef = useRef<ReturnType<typeof useFrameCallback> | null>(null);
 
-  if (dragPosition && mainTableBodyLayout && !previousAnimationIsHappening.value) {
+  const calculateDirection = (): ScrollDirection | null => {
+    if (!dragPosition || !mainTableBodyLayout) return null;
     const { x, y } = dragPosition;
     const edgeThreshold = 60;
 
@@ -98,26 +116,77 @@ const ScrollHandles = ({
 
     const nearLeft = x >= left && x <= left + edgeThreshold && y >= top && y <= bottom && canScrollLeft;
     const nearRight = x >= right - edgeThreshold && x <= right && y >= top && y <= bottom && canScrollRight;
-    const nearTop = y >= top && y <= top + edgeThreshold && canScrollUp;
-    const nearBottom = y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
+    const nearTop = x >= left && x <= right && y >= top && y <= top + edgeThreshold && canScrollUp;
+    const nearBottom = x >= left && x <= right && y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
 
-    const direction: ScrollDirection | null =
-      nearLeft ? 'left' :
+    return nearLeft ? 'left' :
       nearRight ? 'right' :
       nearTop ? 'up' :
       nearBottom ? 'down' :
       null;
-    if (direction === 'left') onScrollLeft(scrollStepRef.current);
-    if (direction === 'right') onScrollRight(scrollStepRef.current);
-    if (direction === 'up') onScrollUp(scrollStepRef.current);
-    if (direction === 'down') onScrollDown(scrollStepRef.current);
-    if (currentDirection.current !== direction) {
-      scrollStepRef.current = START_SCROLL_STEP;
-    } else if (direction) {
-      scrollStepRef.current = Math.min(scrollStepRef.current + START_SCROLL_STEP, 300);
+  };
+
+  const frameCb = useFrameCallback(() => {
+    'worklet';
+    if (!dragPosition || !mainTableBodyLayout) return;
+
+    const x = dragPosition.x;
+    const y = dragPosition.y;
+    const edgeThreshold = 60;
+
+    const left = mainTableBodyLayout.x;
+    const top = mainTableBodyLayout.y + insets.top;
+    const right = left + mainTableBodyLayout.width;
+    const bottom = top + mainTableBodyLayout.height;
+
+    const nearLeft = x >= left && x <= left + edgeThreshold && y >= top && y <= bottom && canScrollLeft;
+    const nearRight = x >= right - edgeThreshold && x <= right && y >= top && y <= bottom && canScrollRight;
+    const nearTop = x >= left && x <= right && y >= top && y <= top + edgeThreshold && canScrollUp;
+    const nearBottom = x >= left && x <= right && y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
+
+    if (nearLeft) {
+      const distance = x - left;
+      const speed = calculateSpeed(distance, edgeThreshold);
+      if (uiScrollLeft) uiScrollLeft(speed, false);
+      return;
     }
-    currentDirection.current = direction;
-  }
+
+    if (nearRight) {
+      const distance = right - x;
+      const speed = calculateSpeed(distance, edgeThreshold);
+      if (uiScrollRight) uiScrollRight(speed, false);
+      return;
+    }
+
+    if (nearTop) {
+      const distance = y - top;
+      const speed = calculateSpeed(distance, edgeThreshold);
+      if (uiScrollUp) uiScrollUp(speed, false);
+      return;
+    }
+
+    if (nearBottom) {
+      const distance = bottom - y;
+      const speed = calculateSpeed(distance, edgeThreshold);
+      if (uiScrollDown) uiScrollDown(speed, false);
+    }
+  }, false);
+
+  frameCallbackRef.current = frameCb;
+
+  useEffect(() => {
+    const direction = calculateDirection();
+    const active = !!direction;
+    if (frameCallbackRef.current && typeof frameCallbackRef.current.setActive === 'function') {
+      frameCallbackRef.current.setActive(active);
+    }
+
+    return () => {
+      if (frameCallbackRef.current && typeof frameCallbackRef.current.setActive === 'function') {
+        frameCallbackRef.current.setActive(false);
+      }
+    };
+  }, [dragPosition, mainTableBodyLayout, canScrollLeft, canScrollRight, canScrollUp, canScrollDown, onScrollLeft, onScrollRight, onScrollUp, onScrollDown, insets]);
 
   if (!showHandles) return null;
 
