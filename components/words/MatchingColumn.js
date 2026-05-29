@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   FlatList,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, useAnimatedRef, useAnimatedScrollHandler, scrollTo } from 'react-native-reanimated';
+import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScrollHandles from '../tables/ScrollHandles';
 
 
 
@@ -139,10 +141,23 @@ const MatchingColumn = ({
   onDragEnd,
   onDragUpdate,
   measureSignal,
+  dragPosition,
 }) => {
+  const insets = useSafeAreaInsets();
+  const [mainColumnBodyLayout, setMainColumnBodyLayout] = useState(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
   // Map to store word layouts by id
   const wordLayouts = useRef(new Map()).current;
   const itemRefs = useRef(new Map()).current;
+  const listRef = useAnimatedRef();
+  const scrollY = useSharedValue(0);
+  const maxVerticalOffset = useSharedValue(0);
+
+  const updateScrollability = (y, maxV) => {
+    setCanScrollUp(y > 0);
+    setCanScrollDown(y < maxV);
+  };
 
   // Remove layouts for words that are no longer present
   useEffect(() => {
@@ -194,11 +209,44 @@ const MatchingColumn = ({
     }
   }, [itemRefs, handleWordLayout]);
 
-  useEffect(() => {
-    // Re-measure when parent signals positions may have shifted
-    if (typeof measureSignal !== 'undefined') {
-      handleScroll();
+  // Animated scroll handler (UI thread) — update shared scrollY and notify JS about scrollability
+  const onAnimatedScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+    onMomentumEnd: (event) => {
+      scrollY.value = event.contentOffset.y;
+      // propagate to JS to update canScrollUp/down
+      scheduleOnRN(updateScrollability, event.contentOffset.y, maxVerticalOffset.value);
     }
+  });
+
+  // UI worklets to scroll up/down — called from ScrollHandles' useFrameCallback (UI thread)
+  const uiScrollUp = (scrollStep, animated) => {
+    'worklet';
+    const newOffset = Math.max(0, scrollY.value - scrollStep);
+    scrollY.value = newOffset;
+    if (listRef) scrollTo(listRef, 0, newOffset, animated);
+  };
+
+  const uiScrollDown = (scrollStep, animated) => {
+    'worklet';
+    const newOffset = Math.min(maxVerticalOffset.value, scrollY.value + scrollStep);
+    scrollY.value = newOffset;
+    if (listRef) scrollTo(listRef, 0, newOffset, animated);
+  };
+
+  // JS wrappers to call UI worklets
+  const scrollUp = (step = 50, animated = true) => {
+    scheduleOnUI(uiScrollUp, step, animated);
+  };
+
+  const scrollDown = (step = 50, animated = true) => {
+    scheduleOnUI(uiScrollDown, step, animated);
+  };
+
+  useEffect(() => {
+    handleScroll();
   }, [measureSignal, handleScroll]);
 
   const renderWord = useCallback(
@@ -238,18 +286,59 @@ const MatchingColumn = ({
   );
 
   return (
-    <View style={styles.columnContainer}>
-      <FlatList
-        data={words}
-        renderItem={renderWord}
-        keyExtractor={(item) => item.id}
-        extraData={{ hoveredId, fadingOutIds, wrongMatchIds, selectedId }}
-        onScroll={() => handleScroll()}
-        scrollEventThrottle={100}
-        scrollEnabled={true}
+    <View
+      style={styles.columnContainer}
+      onLayout={(event) => {
+        const layout = event.nativeEvent.layout;
+        const { width, height } = layout;
+        // measure in window to get screen coords for ScrollHandles comparisons
+        try {
+          event.target.measureInWindow((x, y, w, h) => {
+            setMainColumnBodyLayout({ x, y: y - insets.top, width: w, height: h - 30 /** adjust for padding 15px on both top and bottom */ });
+          });
+        } catch (err) {
+          setMainColumnBodyLayout({ x: 0, y: 0, width, height });
+        }
+
+        // estimate content height and update maxVerticalOffset
+        const ITEM_MARGIN = 16; // approximate
+        const ITEM_MIN_HEIGHT = 50;
+        const totalContentHeight = Math.max(0, words.length * (ITEM_MIN_HEIGHT + ITEM_MARGIN));
+        const maxV = Math.max(0, totalContentHeight - height + 15 /** adjust for padding 15px on both top and bottom */);
+        maxVerticalOffset.value = maxV;
+        // update JS booleans
+        setCanScrollUp(scrollY.value > 0);
+        setCanScrollDown(scrollY.value < maxV);
+      }}
+    >
+      <Animated.ScrollView
+        ref={listRef}
         showsVerticalScrollIndicator={true}
-        bounces={false}
         contentContainerStyle={styles.flatListContent}
+        onScroll={onAnimatedScroll}
+        scrollEventThrottle={16}
+      >
+        {words.map((item) => (
+          <React.Fragment key={item.id}>{renderWord({ item })}</React.Fragment>
+        ))}
+      </Animated.ScrollView>
+
+      <ScrollHandles
+        canScrollLeft={false}
+        canScrollRight={false}
+        canScrollUp={canScrollUp}
+        canScrollDown={canScrollDown}
+        onScrollLeft={() => {}}
+        onScrollRight={() => {}}
+        onScrollUp={() => scrollUp()}
+        onScrollDown={() => scrollDown()}
+        uiScrollLeft={null}
+        uiScrollRight={null}
+        uiScrollUp={uiScrollUp}
+        uiScrollDown={uiScrollDown}
+        showHandles={true}
+        dragPosition={dragPosition}
+        mainTableBodyLayout={mainColumnBodyLayout}
       />
     </View>
   );

@@ -90,8 +90,8 @@ const ScrollHandles = ({
 
     const nearLeft = x >= left && x <= left + edgeThreshold && y >= top && y <= bottom && canScrollLeft;
     const nearRight = x >= right - edgeThreshold && x <= right && y >= top && y <= bottom && canScrollRight;
-    const nearTop = y >= top && y <= top + edgeThreshold && canScrollUp;
-    const nearBottom = y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
+    const nearTop = x >= left && x <= right && y >= top && y <= top + edgeThreshold && canScrollUp;
+    const nearBottom = x >= left && x <= right && y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
 
     return nearLeft ? 'left' :
            nearRight ? 'right' :
@@ -116,8 +116,8 @@ const ScrollHandles = ({
 
     const nearLeft = x >= left && x <= left + edgeThreshold && y >= top && y <= bottom && canScrollLeft;
     const nearRight = x >= right - edgeThreshold && x <= right && y >= top && y <= bottom && canScrollRight;
-    const nearTop = y >= top && y <= top + edgeThreshold && canScrollUp;
-    const nearBottom = y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
+    const nearTop = x >= left && x <= right && y >= top && y <= top + edgeThreshold && canScrollUp;
+    const nearBottom = x >= left && x <= right && y >= bottom - edgeThreshold && y <= bottom && canScrollDown;
 
     if (nearLeft) {
       const distance = x - left;
